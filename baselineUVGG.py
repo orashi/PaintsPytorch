@@ -1,17 +1,8 @@
 import argparse
 import random
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
-import torch.utils.data
-import torchvision.transforms as transforms
 import torchvision.utils as vutils
-from torch.autograd import Variable
-from PIL import Image
-import math
-import numpy as np
 from visdom import Visdom
 from models.base_model import *
 from data.sqData import CreateDataLoader
@@ -147,12 +138,12 @@ for epoch in range(opt.niter):
 
             # train with fake
 
-            fake_cimV, Rembed = netG(inputs, embed)
-            errD_fake_vec = netD(Variable(torch.cat((fake_cimV.data, real_sim), 1)), Variable(Rembed.data))
+            fake_cim = netG(inputs, embed).data
+            errD_fake_vec = netD(Variable(torch.cat((fake_cim, real_sim), 1)), Variable(embed.data))
             errD_fake = criterion_GAN(errD_fake_vec, False)
             errD_fake.backward(retain_graph=True)  # backward on score on real
 
-            errD_real_vec = netD(Variable(torch.cat((real_cim, real_sim), 1)), Variable(Rembed.data))
+            errD_real_vec = netD(Variable(torch.cat((real_cim, real_sim), 1)), Variable(embed.data))
             errD_real = criterion_GAN(errD_real_vec, True)
             errD_real.backward(retain_graph=True)  # backward on score on real
 
@@ -193,26 +184,20 @@ for epoch in range(opt.niter):
                 )
                 vutils.save_image(real_sim.mul(0.5).add(0.5),
                                   '%s/input_samples.png' % opt.outf)
-                viz.images(
-                    real_vim.mul(0.5).add(0.5).cpu().numpy(),
-                    opts=dict(title='hint', caption='alternative hint')
-                )
-                vutils.save_image(real_vim.mul(0.5).add(0.5),
-                                  '%s/alternative_hint.png' % opt.outf)
 
                 fixed_sketch.resize_as_(real_sim).copy_(real_sim)
                 fixed_embed.resize_as_(embed.data).copy_(embed.data)
 
                 flag -= 1
 
-            fake, Rembed = netG(Variable(real_sim), Variable(embed.data))
+            fake = netG(Variable(real_sim), Variable(embed.data))
 
             if gen_iterations < opt.baseGeni:
                 L1loss = criterion_L1(fake, Variable(real_cim))
                 L1loss.backward()
                 errG = L1loss
             else:
-                errG_fake_vec = netD(torch.cat((fake, Variable(real_sim)), 1), Rembed.detach())  # TODO: what if???
+                errG_fake_vec = netD(torch.cat((fake, Variable(real_sim)), 1), Variable(embed.data))  # TODO: what if???
                 errG = criterion_GAN(errG_fake_vec, True)
                 errG.backward(retain_graph=True)
 
@@ -272,14 +257,14 @@ for epoch in range(opt.niter):
                      errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0]))
 
         if gen_iterations % 100 == 0:
-            fake, _ = netG(Variable(fixed_sketch, volatile=True), Variable(fixed_embed, volatile=True))
+            fake = netG(Variable(fixed_sketch, volatile=True), Variable(fixed_embed, volatile=True)).data
             viz.images(
-                fake.data.mul(0.5).add(0.5).cpu().numpy(),
+                fake.mul(0.5).add(0.5).cpu().numpy(),
                 win=imageW,
                 opts=dict(title='generated result', caption='output')
             )
 
-            vutils.save_image(fake.data.mul(0.5).add(0.5),
+            vutils.save_image(fake.mul(0.5).add(0.5),
                               '%s/fake_samples_gen_iter_%08d.png' % (opt.outf, gen_iterations))
 
         gen_iterations += 1
