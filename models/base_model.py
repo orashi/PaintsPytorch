@@ -168,7 +168,7 @@ class UnetGenerator(nn.Module):
 
         self.up1 = nn.ConvTranspose2d(ngf * 2, 3, kernel_size=4, stride=2, padding=1)
 
-        self.linear = nn.Linear(512 * 7 * 7, 2048)
+        self.linear = nn.Linear(4096, 2048)
 
         U_weight_init(self)
 
@@ -182,7 +182,7 @@ class UnetGenerator(nn.Module):
         x7 = F.leaky_relu(self.down7(x6), 0.2, True)
         x8 = F.relu(self.down8(x7), True)
 
-        VGG = F.relu(self.linear(VGG.view(VGG.size(0), -1)), True)
+        VGG = F.relu(self.linear(F.relu(VGG), True), True)
         x = F.relu(self.up8(torch.cat([x8, VGG.view(-1, 2048, 1, 1)], 1)), True)
         x = F.relu(self.up7(torch.cat([x, x7], 1)), True)
         x = F.relu(self.up6(torch.cat([x, x6], 1)), True)
@@ -192,8 +192,6 @@ class UnetGenerator(nn.Module):
         x = F.relu(self.up2(torch.cat([x, x2], 1)), True)
         x = F.tanh(self.up1(torch.cat([x, x1], 1)))
         return x, VGG
-
-
 
 
 ############################
@@ -263,4 +261,3 @@ def def_netF():
     for param in vgg19.parameters():
         param.requires_grad = False
     return vgg19.features
-
