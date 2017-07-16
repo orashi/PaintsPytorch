@@ -115,48 +115,37 @@ class UnetGenerator(nn.Module):
     def __init__(self, ngf, norm_layer):
         super(UnetGenerator, self).__init__()
 
+        down = [nn.Conv2d(4, ngf, kernel_size=3, stride=1, padding=1), norm_layer(ngf)]
+        self.downH = nn.Sequential(*down)
+
         ################ downS
         self.down1 = nn.Conv2d(1, ngf // 2, kernel_size=4, stride=2, padding=1)
 
         down = [nn.Conv2d(ngf // 2, ngf, kernel_size=4, stride=2, padding=1), norm_layer(ngf)]
         self.down2 = nn.Sequential(*down)
 
-        down = [nn.Conv2d(ngf * 2, ngf * 2, kernel_size=4, stride=2, padding=1), norm_layer(ngf * 2)]
+        down = [nn.Conv2d(ngf * 2, ngf * 4, kernel_size=4, stride=2, padding=1), norm_layer(ngf * 4)]
         self.down3 = nn.Sequential(*down)
 
-        down = [nn.Conv2d(ngf * 2, ngf * 4, kernel_size=4, stride=2, padding=1), norm_layer(ngf * 4)]
+        down = [nn.Conv2d(ngf * 4, ngf * 8, kernel_size=4, stride=2, padding=1), norm_layer(ngf * 8)]
         self.down4 = nn.Sequential(*down)
 
-        down = [nn.Conv2d(ngf * 4, ngf * 8, kernel_size=4, stride=2, padding=1), norm_layer(ngf * 8)]
-        self.down5 = nn.Sequential(*down)
+        ################ mid
+        mid = [nn.Conv2d(ngf * 8, ngf * 8, kernel_size=3, stride=1, padding=1), norm_layer(ngf * 8)]
+        self.mid1 = nn.Sequential(*mid)
 
-        down = [nn.Conv2d(ngf * 4, ngf * 4, kernel_size=4, stride=2, padding=1), norm_layer(ngf * 4)]
-        self.down6 = nn.Sequential(*down)
+        mid = [nn.Conv2d(ngf * 8, ngf * 8, kernel_size=3, stride=1, padding=1), norm_layer(ngf * 8)]
+        self.mid2 = nn.Sequential(*mid)
 
-        down = [nn.Conv2d(ngf * 4, ngf * 4, kernel_size=4, stride=2, padding=1), norm_layer(ngf * 4)]
-        self.down7 = nn.Sequential(*down)
+        mid = [nn.Conv2d(ngf * 8, ngf * 8, kernel_size=3, stride=1, padding=1), norm_layer(ngf * 8)]
+        self.mid3 = nn.Sequential(*mid)
 
-        self.down8 = nn.Conv2d(ngf * 4, ngf * 8, kernel_size=4, stride=2, padding=1)
+        mid = [nn.Conv2d(ngf * 8, ngf * 8, kernel_size=3, stride=1, padding=1), norm_layer(ngf * 8)]
+        self.mid4 = nn.Sequential(*mid)
 
         ################ down--up
 
-        up = [nn.ConvTranspose2d(ngf * 8 * 2, ngf * 8, kernel_size=4, stride=2, padding=1),
-              norm_layer(ngf * 8)]
-        self.up8 = nn.Sequential(*up)
-
-        up = [nn.ConvTranspose2d(ngf * 8 * 2, ngf * 8, kernel_size=4, stride=2, padding=1),
-              norm_layer(ngf * 8)]
-        self.up7 = nn.Sequential(*up)
-
-        up = [nn.ConvTranspose2d(ngf * 8 * 2, ngf * 8, kernel_size=4, stride=2, padding=1),
-              norm_layer(ngf * 8)]
-        self.up6 = nn.Sequential(*up)
-
-        up = [nn.ConvTranspose2d(ngf * 8 * 2, ngf * 8, kernel_size=4, stride=2, padding=1),
-              norm_layer(ngf * 8)]
-        self.up5 = nn.Sequential(*up)
-
-        up = [nn.ConvTranspose2d(ngf * 8 * 2, ngf * 4, kernel_size=4, stride=2, padding=1),
+        up = [nn.ConvTranspose2d(ngf * 8, ngf * 4, kernel_size=4, stride=2, padding=1),
               norm_layer(ngf * 4)]
         self.up4 = nn.Sequential(*up)
 
@@ -164,7 +153,8 @@ class UnetGenerator(nn.Module):
               norm_layer(ngf * 2)]
         self.up3 = nn.Sequential(*up)
 
-        up = [nn.ConvTranspose2d(ngf * 3, ngf, kernel_size=4, stride=2, padding=1), norm_layer(ngf)]
+        up = [nn.ConvTranspose2d(ngf * 2 * 2, ngf, kernel_size=4, stride=2, padding=1),
+              norm_layer(ngf)]
         self.up2 = nn.Sequential(*up)
 
         self.up1 = nn.ConvTranspose2d(ngf + ngf // 2, 3, kernel_size=4, stride=2, padding=1)
@@ -172,31 +162,20 @@ class UnetGenerator(nn.Module):
         U_weight_init(self)
 
     def forward(self, input, hint):
+        v = F.leaky_relu(self.downH(hint), 0.2, True)
+
         x1 = F.leaky_relu(self.down1(input), 0.2, True)
         x2 = F.leaky_relu(self.down2(x1), 0.2, True)
-        x3 = F.leaky_relu(self.down3(x2), 0.2, True)
+        x3 = F.leaky_relu(self.down3(torch.cat([x2, v], 1)), 0.2, True)
         x4 = F.leaky_relu(self.down4(x3), 0.2, True)
-        x5 = F.leaky_relu(self.down5(x4), 0.2, True)
-        x6 = F.leaky_relu(self.down6(x5), 0.2, True)
-        x7 = F.leaky_relu(self.down7(x6), 0.2, True)
-        x8 = F.relu(self.down8(x7), True)
+        m = F.leaky_relu(self.mid1(x4), 0.2, True)
+        m = F.leaky_relu(self.mid1(m), 0.2, True)
+        m = F.leaky_relu(self.mid1(m), 0.2, True)
+        m = F.leaky_relu(self.mid1(m), 0.2, True)
 
-        v1 = F.leaky_relu(self.downV1(inputV), 0.2, True)
-        v2 = F.leaky_relu(self.downV2(v1), 0.2, True)
-        v3 = F.leaky_relu(self.downV3(v2), 0.2, True)
-        v4 = F.leaky_relu(self.downV4(v3), 0.2, True)
-        v5 = F.leaky_relu(self.downV5(v4), 0.2, True)
-        v6 = F.leaky_relu(self.downV6(v5), 0.2, True)
-        v7 = F.leaky_relu(self.downV7(v6), 0.2, True)
-        v8 = F.relu(self.downV8(v7), True)
-
-        x = F.relu(self.up8(torch.cat([x8, v8], 1)), True)
-        x = F.relu(self.up7(torch.cat([x, x7, v7], 1)), True)
-        x = F.relu(self.up6(torch.cat([x, x6, v6], 1)), True)
-        x = F.relu(self.up5(torch.cat([x, x5, v5], 1)), True)
-        x = F.relu(self.up4(torch.cat([x, x4, v4], 1)), True)
-        x = F.relu(self.up3(torch.cat([x, x3, v3], 1)), True)
-        x = F.relu(self.up2(torch.cat([x, x2], 1)), True)
+        x = F.relu(self.up4(m), True)
+        x = F.relu(self.up3(torch.cat([x, x3], 1)), True)
+        x = F.relu(self.up2(torch.cat([x, x2, v], 1)), True)
         x = F.tanh(self.up1(torch.cat([x, x1], 1)))
         return x
 
@@ -220,6 +199,9 @@ class NLayerDiscriminator(nn.Module):
         padw = 1
         self.ndf = ndf
 
+        down = [nn.Conv2d(4, ndf, kernel_size=3, stride=1, padding=1), norm_layer(ndf)]
+        self.downH = nn.Sequential(*down)
+
         sequence = [
             nn.Conv2d(4, ndf, kernel_size=kw, stride=2, padding=padw),
             nn.LeakyReLU(0.2, True)
@@ -231,9 +213,10 @@ class NLayerDiscriminator(nn.Module):
             norm_layer(ndf * 2),
             nn.LeakyReLU(0.2, True)
         ]
+        self.model = nn.Sequential(*sequence)
 
-        sequence += [
-            nn.Conv2d(ndf * 2, ndf * 4,
+        sequence = [
+            nn.Conv2d(ndf * 3, ndf * 4,
                       kernel_size=kw, stride=2, padding=padw),
             norm_layer(ndf * 4),
             nn.LeakyReLU(0.2, True)
@@ -247,12 +230,15 @@ class NLayerDiscriminator(nn.Module):
             nn.Conv2d(ndf * 8, 1, kernel_size=kw, stride=1, padding=padw)
         ]
 
-        self.model = nn.Sequential(*sequence)
+        self.model2 = nn.Sequential(*sequence)
 
         LR_weight_init(self)
 
     def forward(self, input, hint):
-        return self.model(input)
+        v = F.leaky_relu(self.downH(hint), 0.2, True)
+        temp = self.model(input)
+        return self.model2(torch.cat([temp, v], 1))
+
 
 # class NLayerDiscriminator(nn.Module):
 #     def __init__(self, ndf, norm_layer=nn.BatchNorm2d):

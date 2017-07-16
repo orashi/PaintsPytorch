@@ -129,7 +129,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(0.75).float().cuda()
+            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.9, 0.96)).float().cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
             # train with fake
 
@@ -163,7 +163,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(0.75).float().cuda()
+            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.7, 0.9)).float().cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
 
             if flag:  # fix samples

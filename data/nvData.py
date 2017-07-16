@@ -29,7 +29,7 @@ class RandomSizedCrop(object):
     def __call__(self, img):
         for attempt in range(10):
             area = img.size[0] * img.size[1]
-            target_area = random.uniform(0.85, 1.) * area
+            target_area = random.uniform(0.9, 1.) * area
             aspect_ratio = random.uniform(7. / 8, 8. / 7)
 
             w = int(round(math.sqrt(target_area * aspect_ratio)))
