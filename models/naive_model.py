@@ -199,9 +199,6 @@ class NLayerDiscriminator(nn.Module):
         padw = 1
         self.ndf = ndf
 
-        down = [nn.Conv2d(4, ndf, kernel_size=3, stride=1, padding=1), norm_layer(ndf)]
-        self.downH = nn.Sequential(*down)
-
         sequence = [
             nn.Conv2d(4, ndf, kernel_size=kw, stride=2, padding=padw),
             nn.LeakyReLU(0.2, True)
@@ -213,10 +210,9 @@ class NLayerDiscriminator(nn.Module):
             norm_layer(ndf * 2),
             nn.LeakyReLU(0.2, True)
         ]
-        self.model = nn.Sequential(*sequence)
 
-        sequence = [
-            nn.Conv2d(ndf * 3, ndf * 4,
+        sequence += [
+            nn.Conv2d(ndf * 2, ndf * 4,
                       kernel_size=kw, stride=2, padding=padw),
             norm_layer(ndf * 4),
             nn.LeakyReLU(0.2, True)
@@ -230,15 +226,12 @@ class NLayerDiscriminator(nn.Module):
             nn.Conv2d(ndf * 8, 1, kernel_size=kw, stride=1, padding=padw)
         ]
 
-        self.model2 = nn.Sequential(*sequence)
+        self.model = nn.Sequential(*sequence)
 
         LR_weight_init(self)
 
-    def forward(self, input, hint):
-        v = F.leaky_relu(self.downH(hint), 0.2, True)
-        temp = self.model(input)
-        return self.model2(torch.cat([temp, v], 1))
-
+    def forward(self, input):
+        return self.model(input)
 
 # class NLayerDiscriminator(nn.Module):
 #     def __init__(self, ndf, norm_layer=nn.BatchNorm2d):

@@ -129,16 +129,16 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.9, 0.96)).float().cuda()
+            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.996, 0.99854)).float().cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
             # train with fake
 
             fake_cim = netG(Variable(real_sim, volatile=True), Variable(hint, volatile=True)).data
-            errD_fake_vec = netD(Variable(torch.cat((fake_cim, real_sim), 1)), Variable(hint))
+            errD_fake_vec = netD(Variable(torch.cat((fake_cim, real_sim), 1)))
             errD_fake = criterion_GAN(errD_fake_vec, False)
             errD_fake.backward(retain_graph=True)  # backward on score on real
 
-            errD_real_vec = netD(Variable(torch.cat((real_cim, real_sim), 1)), Variable(hint))
+            errD_real_vec = netD(Variable(torch.cat((real_cim, real_sim), 1)))
             errD_real = criterion_GAN(errD_real_vec, True)
             errD_real.backward(retain_graph=True)  # backward on score on real
 
@@ -163,7 +163,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.7, 0.9)).float().cuda()
+            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.996, 0.99854)).float().cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
 
             if flag:  # fix samples
@@ -198,7 +198,7 @@ for epoch in range(opt.niter):
                 L1loss.backward()
                 errG = L1loss
             else:
-                errG_fake_vec = netD(torch.cat((fake, Variable(real_sim)), 1), Variable(hint))  # TODO: what if???
+                errG_fake_vec = netD(torch.cat((fake, Variable(real_sim)), 1))  # TODO: what if???
                 errG = criterion_GAN(errG_fake_vec, True)
                 errG.backward(retain_graph=True)
 
