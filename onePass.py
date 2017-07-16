@@ -26,7 +26,7 @@ parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--netG', default='', help="path to netG (to continue training)")
 parser.add_argument('--netD', default='', help="path to netD (to continue training)")
 parser.add_argument('--outf', default='.', help='folder to output images and model checkpoints')
-parser.add_argument('--Diters', type=int, default=1, help='number of D iters per each G iter')
+parser.add_argument('--Diters', type=int, default=5, help='number of D iters per each G iter')
 parser.add_argument('--manualSeed', type=int, default=2345, help='random seed to use. Default=1234')
 parser.add_argument('--baseGeni', type=int, default=2500, help='start base of pure pair L1 loss')
 parser.add_argument('--geni', type=int, default=0, help='continue gen image num')
@@ -78,16 +78,21 @@ criterion_GAN = GANLoss()
 if opt.cuda:
     criterion_GAN = GANLoss(tensor=torch.cuda.FloatTensor)
 criterion_L1 = nn.L1Loss()
+L2_dist = nn.PairwiseDistance(2)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
+one = torch.FloatTensor([1])
+mone = one * -1
 
 if opt.cuda:
     netD.cuda()
     netG.cuda()
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
+    one, mone = one.cuda(), mone.cuda()
     criterion_GAN.cuda()
     criterion_L1.cuda()
+    L2_dist.cuda()
 
 # setup optimizer
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.9))
@@ -133,14 +138,24 @@ for epoch in range(opt.niter):
 
             fake_cim = netG(Variable(real_sim, volatile=True), Variable(real_vim, volatile=True)).data
             errD_fake_vec = netD(Variable(torch.cat((fake_cim, real_sim), 1)))
-            errD_fake = criterion_GAN(errD_fake_vec, False)
-            errD_fake.backward(retain_graph=True)  # backward on score on real
+            errD_fake = errD_fake_vec.mean()
+            errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
             errD_real_vec = netD(Variable(torch.cat((real_cim, real_sim), 1)))
-            errD_real = criterion_GAN(errD_real_vec, True)
-            errD_real.backward(retain_graph=True)  # backward on score on real
+            errD_real = errD_real_vec.mean()
+            errD_real.backward(mone, retain_graph=True)  # backward on score on real
 
-            errD = errD_real + errD_fake
+            errD = errD_real - errD_fake
+
+            # GP term
+            dist = L2_dist(Variable(real_cim).view(opt.batchSize, -1), Variable(fake_cim).view(opt.batchSize, -1)).view(
+                -1)
+            lip_est = (errD_real_vec.view(opt.batchSize, -1).mean(1) - errD_fake_vec.view(opt.batchSize, -1).mean(
+                1)).abs() / (dist + 1e-8)
+
+            lip_loss = 10 * ((1.0 - lip_est) ** 2).mean(0)  # ????
+            lip_loss.backward(one)
+            errD = errD + lip_loss
 
             optimizerD.step()
 
@@ -194,8 +209,8 @@ for epoch in range(opt.niter):
                 errG = L1loss
             else:
                 errG_fake_vec = netD(torch.cat((fake, Variable(real_sim)), 1))  # TODO: what if???
-                errG = criterion_GAN(errG_fake_vec, True)
-                errG.backward(retain_graph=True)
+                errG = errG_fake_vec.mean()
+                errG.backward(mone, retain_graph=True)
 
                 L1loss = criterion_L1(fake, Variable(real_cim))
                 L1loss.backward(retain_graph=True)
@@ -220,19 +235,15 @@ for epoch in range(opt.niter):
             if flag3:
                 D1 = viz.line(
                     np.array([errD.data[0]]), np.array([gen_iterations]),
-                    opts=dict(title='errD(distinguishability)', caption='total Dloss')
+                    opts=dict(title='errD(distance)', caption='total Dloss')
                 )
                 D2 = viz.line(
-                    np.array([errD_real.data[0]]), np.array([gen_iterations]),
-                    opts=dict(title='errD_real', caption='real\'s mistake')
-                )
-                D3 = viz.line(
-                    np.array([errD_fake.data[0]]), np.array([gen_iterations]),
-                    opts=dict(title='errD_fake', caption='fake\'s mistake')
+                    np.array([lip_loss.data[0]]), np.array([gen_iterations]),
+                    opts=dict(title='Gradient penalty', caption='real\'s mistake')
                 )
                 G1 = viz.line(
-                    np.array([errG.data[0]]), np.array([gen_iterations]),
-                    opts=dict(title='Gnet loss toward real', caption='Gnet loss')
+                    np.array([-errG.data[0]]), np.array([gen_iterations]),
+                    opts=dict(title='Gnet loss', caption='fake\'s mistake')
                 )
                 flag3 -= 1
             if flag2:
@@ -243,14 +254,13 @@ for epoch in range(opt.niter):
                 flag2 -= 1
 
             viz.line(np.array([errD.data[0]]), np.array([gen_iterations]), update='append', win=D1)
-            viz.line(np.array([errD_real.data[0]]), np.array([gen_iterations]), update='append', win=D2)
-            viz.line(np.array([errD_fake.data[0]]), np.array([gen_iterations]), update='append', win=D3)
-            viz.line(np.array([errG.data[0]]), np.array([gen_iterations]), update='append', win=G1)
+            viz.line(np.array([lip_loss.data[0]]), np.array([gen_iterations]), update='append', win=D2)
+            viz.line(np.array([-errG.data[0]]), np.array([gen_iterations]), update='append', win=G1)
             viz.line(np.array([L1loss.data[0]]), np.array([gen_iterations]), update='append', win=L1window)
 
-            print('[%d/%d][%d/%d][%d] errD: %f err_G: %f err_D_real: %f err_D_fake %f'
+            print('[%d/%d][%d/%d][%d] distance: %f err_G: %f GPLoss %f L1 %f'
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations,
-                     errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0]))
+                     errD.data[0], -errG.data[0], lip_loss.data[0], L1loss.data[0]))
 
         if gen_iterations % 100 == 0:
             fake = netG(Variable(fixed_sketch, volatile=True), Variable(fixed_hint, volatile=True))
