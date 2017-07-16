@@ -74,20 +74,29 @@ if opt.netD != '':
     netD.load_state_dict(torch.load(opt.netD))
 print(netD)
 
+netF = def_netF()
+print(netD)
+
 criterion_GAN = GANLoss()
 if opt.cuda:
     criterion_GAN = GANLoss(tensor=torch.cuda.FloatTensor)
 criterion_L1 = nn.L1Loss()
+criterion_L2 = nn.MSELoss()
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
+saber = torch.FloatTensor([0.485 - 0.5, 0.456 - 0.5, 0.406 - 0.5]).view(1, 3, 1, 1)
+diver = torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
 if opt.cuda:
     netD.cuda()
     netG.cuda()
+    netF.cuda()
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
+    saber, diver = saber.cuda(), diver.cuda()
     criterion_GAN.cuda()
     criterion_L1.cuda()
+    criterion_L2.cuda()
 
 # setup optimizer
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.9))
@@ -203,16 +212,23 @@ for epoch in range(opt.niter):
             fake = netG(Variable(real_sim), Variable(hint))
 
             if gen_iterations < opt.baseGeni:
-                L1loss = criterion_L1(fake, Variable(real_cim))
-                L1loss.backward()
-                errG = L1loss
+                contentLoss = criterion_L2(netF((fake.mul(0.5) - saber) / diver),
+                                           netF(Variable((real_cim.mul(0.5) - saber) / diver)))
+                contentLoss.backward()
+                errG = contentLoss
+                # contentLoss = criterion_L1(fake, Variable(real_cim))
+                # contentLoss.backward()
+                # errG = contentLoss
             else:
                 errG_fake_vec = netD(torch.cat((fake, Variable(real_sim)), 1))  # TODO: what if???
-                errG = criterion_GAN(errG_fake_vec, True)
+                errG = criterion_GAN(errG_fake_vec, True) * 0.5
                 errG.backward(retain_graph=True)
 
-                L1loss = criterion_L1(fake, Variable(real_cim))
-                L1loss.backward(retain_graph=True)
+                contentLoss = criterion_L2(netF((fake.mul(0.5) - saber) / diver),
+                                           netF(Variable((real_cim.mul(0.5) - saber) / diver)))
+                contentLoss.backward()
+                # contentLoss = criterion_L1(fake, Variable(real_cim))
+                # contentLoss.backward(retain_graph=True)
 
             optimizerG.step()
 
@@ -222,14 +238,14 @@ for epoch in range(opt.niter):
         if gen_iterations < opt.baseGeni:
             if flag2:
                 L1window = viz.line(
-                    np.array([L1loss.data[0]]), np.array([gen_iterations]),
-                    opts=dict(title='L1 loss')
+                    np.array([contentLoss.data[0]]), np.array([gen_iterations]),
+                    opts=dict(title='content loss')
                 )
                 flag2 -= 1
-            viz.line(np.array([L1loss.data[0]]), np.array([gen_iterations]), update='append', win=L1window)
+            viz.line(np.array([contentLoss.data[0]]), np.array([gen_iterations]), update='append', win=L1window)
 
-            print('[%d/%d][%d/%d][%d] L1 %f '
-                  % (epoch, opt.niter, i, len(dataloader), gen_iterations, L1loss.data[0]))
+            print('[%d/%d][%d/%d][%d] content %f '
+                  % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
             if flag3:
                 D1 = viz.line(
@@ -251,8 +267,8 @@ for epoch in range(opt.niter):
                 flag3 -= 1
             if flag2:
                 L1window = viz.line(
-                    np.array([L1loss.data[0]]), np.array([gen_iterations]),
-                    opts=dict(title='L1 loss')
+                    np.array([contentLoss.data[0]]), np.array([gen_iterations]),
+                    opts=dict(title='content loss')
                 )
                 flag2 -= 1
 
@@ -260,11 +276,11 @@ for epoch in range(opt.niter):
             viz.line(np.array([errD_real.data[0]]), np.array([gen_iterations]), update='append', win=D2)
             viz.line(np.array([errD_fake.data[0]]), np.array([gen_iterations]), update='append', win=D3)
             viz.line(np.array([errG.data[0]]), np.array([gen_iterations]), update='append', win=G1)
-            viz.line(np.array([L1loss.data[0]]), np.array([gen_iterations]), update='append', win=L1window)
+            viz.line(np.array([contentLoss.data[0]]), np.array([gen_iterations]), update='append', win=L1window)
 
-            print('[%d/%d][%d/%d][%d] errD: %f err_G: %f err_D_real: %f err_D_fake %f'
+            print('[%d/%d][%d/%d][%d] errD: %f err_G: %f err_D_real: %f err_D_fake %f content loss %f'
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations,
-                     errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0]))
+                     errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
 
         if gen_iterations % 100 == 0:
             fake = netG(Variable(fixed_sketch, volatile=True), Variable(fixed_hint, volatile=True))

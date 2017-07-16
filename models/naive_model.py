@@ -232,6 +232,18 @@ class NLayerDiscriminator(nn.Module):
 
     def forward(self, input):
         return self.model(input)
+    
+
+
+def def_netF():
+    vgg16 = M.vgg16()
+    vgg16.load_state_dict(torch.load('vgg16.pth'))
+    vgg16.features = nn.Sequential(
+        *list(vgg16.features.children())[:9]
+    )
+    for param in vgg16.parameters():
+        param.requires_grad = False
+    return vgg16.features
 
 # class NLayerDiscriminator(nn.Module):
 #     def __init__(self, ndf, norm_layer=nn.BatchNorm2d):
@@ -322,3 +334,5 @@ class NLayerDiscriminator(nn.Module):
 #         r = self.res3(r) + r
 #         x = self.modelE(torch.cat((x, r), 1))
 #         return x
+
+
