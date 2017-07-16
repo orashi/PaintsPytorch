@@ -129,8 +129,13 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.996, 0.99854)).float().cuda()
+            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.9948, 0.9982)).float().cuda()
+            if random.random() < 0.1:
+                mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.9, 0.96)).float().cuda()
+                if random.random() < 0.05:
+                    mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.5, 0.96)).float().cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
+
             # train with fake
 
             fake_cim = netG(Variable(real_sim, volatile=True), Variable(hint, volatile=True)).data
@@ -163,7 +168,11 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.996, 0.99854)).float().cuda()
+            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.9948, 0.9982)).float().cuda()
+            if random.random() < 0.1:
+                mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.9, 0.96)).float().cuda()
+                if random.random() < 0.05:
+                    mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.5, 0.96)).float().cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
 
             if flag:  # fix samples
