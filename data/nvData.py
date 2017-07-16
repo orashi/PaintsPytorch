@@ -29,8 +29,8 @@ class RandomSizedCrop(object):
     def __call__(self, img):
         for attempt in range(10):
             area = img.size[0] * img.size[1]
-            target_area = random.uniform(0.70, 0.98) * area
-            aspect_ratio = random.uniform(5. / 8, 8. / 5)
+            target_area = random.uniform(0.85, 1.) * area
+            aspect_ratio = random.uniform(7. / 8, 8. / 7)
 
             w = int(round(math.sqrt(target_area * aspect_ratio)))
             h = int(round(math.sqrt(target_area / aspect_ratio)))
@@ -91,12 +91,11 @@ class ImageFolder(data.Dataset):
         Cimg, Simg = color_loader(Cpath), sketch_loader(Spath)
         if random.random() < 0.5:
             Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
-        Vimg = Cimg
-        # if random.random() < 0.5:
-        #     Vimg = Vimg.transpose(Image.FLIP_LEFT_RIGHT)
+        if random.random() < 0.5:
+            Cimg, Simg = Cimg.transpose(Image.FLIP_TOP_BOTTOM), Simg.transpose(Image.FLIP_TOP_BOTTOM)
         # if random.random() < 0.5:
         #     Vimg = Vimg.transpose(Image.ROTATE_90)
-        Cimg, Vimg, Simg = self.transform(Cimg), self.vtransform(Vimg), self.stransform(Simg)
+        Cimg, Vimg, Simg = self.transform(Cimg), self.vtransform(Cimg), self.stransform(Simg)
 
         return Cimg, Vimg, Simg
 
@@ -115,7 +114,7 @@ def CreateDataLoader(opt):
     ])
 
     VTrans = transforms.Compose([
-        RandomSizedCrop(opt.imageSize, Image.BICUBIC),
+        RandomSizedCrop(64, Image.BICUBIC),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
