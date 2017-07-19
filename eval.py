@@ -16,11 +16,11 @@ import numpy as np
 from models.naive_model import def_netG
 
 netG = def_netG(ngf=64, norm='instance')
-netG.load_state_dict(torch.load('netG_epoch_270.pth'))
+netG.load_state_dict(torch.load('netG_epoch_240.pth'))
 netG.cuda().eval()
 
-sketch = Image.open('233.png').convert('L')
-colormap = Image.open('234.png').convert('RGB')
+sketch = Image.open('1.jpg').convert('L')
+colormap = Image.open('2.jpg').convert('RGB')
 
 
 pack = 1
@@ -41,9 +41,9 @@ sketch, colormap = sketch.unsqueeze(0).cuda(), colormap.unsqueeze(0).cuda()
 rmask = colormap.mean(1).lt(0.95).float().cuda().view(1, 1, colormap.shape[2], colormap.shape[3])
 wmask = colormap.mean(1).ge(0.95).float().cuda().view_as(rmask)
 
-mask = torch.rand(rmask.shape).ge(0.7).float().cuda()
+mask = torch.rand(rmask.shape).ge(0.8).float().cuda()
 
-mask = mask * rmask + torch.rand(rmask.shape).ge(0.8) .float().cuda() * wmask
+mask = mask * rmask + torch.rand(rmask.shape).ge(0.92) .float().cuda() * wmask
 
 hint = torch.cat((colormap * mask, mask), 1)
 
