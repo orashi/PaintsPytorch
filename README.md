@@ -5,3 +5,5 @@ This short semester's project includes android and web interface, here is the co
 <img src="http://orashi.github.io/pic1.png" width="1000px"/>
 
 <img src="http://orashi.github.io/pic2.png" width="1000px"/>
+
+<img src="http://orashi.github.io/pic3.png" width="1000px"/>
