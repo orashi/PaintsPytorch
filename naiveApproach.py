@@ -78,9 +78,6 @@ print(netD)
 netF = def_netF()
 print(netD)
 
-criterion_GAN = GANLoss()
-if opt.cuda:
-    criterion_GAN = GANLoss(tensor=torch.cuda.FloatTensor)
 criterion_L1 = nn.L1Loss()
 criterion_L2 = nn.MSELoss()
 one = torch.FloatTensor([1])
@@ -97,7 +94,6 @@ if opt.cuda:
     netF.cuda()
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
     saber, diver = saber.cuda(), diver.cuda()
-    criterion_GAN.cuda()
     criterion_L1.cuda()
     criterion_L2.cuda()
     one, mone = one.cuda(), mone.cuda()
@@ -110,10 +106,10 @@ if opt.optim:
     optimizerG.load_state_dict(torch.load('%s/optimG_checkpoint.pth' % opt.outf))
     optimizerD.load_state_dict(torch.load('%s/optimD_checkpoint.pth' % opt.outf))
 
-schedulerG = lr_scheduler.ReduceLROnPlateau(optimizerG, mode='max', verbose=True, min_lr=0.0000005,
-                                            patience=8)  # 1.5*10^5 iter
-schedulerD = lr_scheduler.ReduceLROnPlateau(optimizerD, mode='max', verbose=True, min_lr=0.0000005,
-                                            patience=8)  # 1.5*10^5 iter
+# schedulerG = lr_scheduler.ReduceLROnPlateau(optimizerG, mode='max', verbose=True, min_lr=0.0000005,
+#                                             patience=8)  # 1.5*10^5 iter
+# schedulerD = lr_scheduler.ReduceLROnPlateau(optimizerD, mode='max', verbose=True, min_lr=0.0000005,
+#                                             patience=8)  # 1.5*10^5 iter
 
 
 # schedulerG = lr_scheduler.MultiStepLR(optimizerG, milestones=[60, 120], gamma=0.1)  # 1.5*10^5 iter
