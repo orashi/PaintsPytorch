@@ -7,12 +7,45 @@ import random
 import math
 from PIL import Image, ImageOps
 from torchvision.transforms import Scale, CenterCrop
-
+import numbers
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
     '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
 ]
+
+
+class RandomCrop(object):
+    """Crops the given PIL.Image at a random location to have a region of
+    the given size. size can be a tuple (target_height, target_width)
+    or an integer, in which case the target will be of a square shape (size, size)
+    """
+
+    def __init__(self, size):
+        if isinstance(size, numbers.Number):
+            self.size = (int(size), int(size))
+        else:
+            self.size = size
+
+    def __call__(self, img1, img2):
+        w, h = img1.size
+        th, tw = self.size
+        if w == tw and h == th:  # ValueError: empty range for randrange() (0,0, 0)
+            return img1, img2
+
+        if w == tw:
+            x1 = 0
+            y1 = random.randint(0, h - th)
+            return img1.crop((x1, y1, x1 + tw, y1 + th)), img2.crop((x1, y1, x1 + tw, y1 + th))
+
+        elif h == th:
+            x1 = random.randint(0, w - tw)
+            y1 = 0
+            return img1.crop((x1, y1, x1 + tw, y1 + th)), img2.crop((x1, y1, x1 + tw, y1 + th))
+
+
+
+
 
 class RandomSizedCrop(object):
     """Random crop the given PIL.Image to a random size of (0.08 to 1.0) of the original size
@@ -60,7 +93,7 @@ def is_image_file(filename):
 def make_dataset(Cdir, Sdir):
     images = []
 
-    for _, __, fnames in sorted(os.walk(Cdir)):
+    for _, __, fnames in sorted(os.walk(Sdir)):
         for fname in fnames:
             if is_image_file(fname):
                 Cpath, Spath = os.path.join(Cdir, fname), os.path.join(Sdir, fname)
@@ -74,6 +107,7 @@ def color_loader(path):
 
 def sketch_loader(path):
     return Image.open(path).convert('L')
+
 
 class ImageFolder(data.Dataset):
     def __init__(self, rootC, rootS, transform=None, vtransform=None, stransform=None):
@@ -89,6 +123,7 @@ class ImageFolder(data.Dataset):
     def __getitem__(self, index):
         Cpath, Spath = self.imgs[index]
         Cimg, Simg = color_loader(Cpath), sketch_loader(Spath)
+        Cimg, Simg = RandomCrop(512)(Cimg, Simg)
         if random.random() < 0.5:
             Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
         if random.random() < 0.5:
