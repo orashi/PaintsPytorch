@@ -31,7 +31,7 @@ parser.add_argument('--manualSeed', type=int, default=2345, help='random seed to
 parser.add_argument('--baseGeni', type=int, default=2500, help='start base of pure pair L1 loss')
 parser.add_argument('--geni', type=int, default=0, help='continue gen image num')
 parser.add_argument('--epoi', type=int, default=0, help='continue epoch num')
-parser.add_argument('--env', type=str, default='main', help='visdom env')
+parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 # parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 
 opt = parser.parse_args()
