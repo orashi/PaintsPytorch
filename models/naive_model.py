@@ -94,7 +94,7 @@ class def_netG(nn.Module):
     def __init__(self, ngf=64):
         super(def_netG, self).__init__()
 
-        down = [nn.Conv2d(4, ngf, kernel_size=7, stride=1, padding=1), nn.ReLU(inplace=True)]
+        down = [nn.Conv2d(4, ngf, kernel_size=7, stride=1, padding=3), nn.ReLU(inplace=True)]
         self.downH = nn.Sequential(*down)
 
         ################ downS
@@ -121,7 +121,7 @@ class def_netG(nn.Module):
                    ResNeXtBottleneck(ngf * 4, ngf * 4, cardinality=8, dilate=1)]
         tunnel3 = nn.Sequential(*tunnel)
 
-        self.up_to3 = nn.Sequential(nn.Conv2d(ngf * 8, ngf * 4 * 4, kernel_size=4, stride=2, padding=1),
+        self.up_to3 = nn.Sequential(nn.Conv2d(ngf * 8, ngf * 4 * 4, kernel_size=3, stride=1, padding=1),
                                     nn.PixelShuffle(2),
                                     nn.ReLU(inplace=True),
                                     tunnel3)
@@ -134,7 +134,7 @@ class def_netG(nn.Module):
                    ResNeXtBottleneck(ngf * 2, ngf * 2, cardinality=8, dilate=1)]
         tunnel2 = nn.Sequential(*tunnel)
 
-        self.up_to2 = nn.Sequential(nn.Conv2d(ngf * 4 * 2, ngf * 2 * 4, kernel_size=4, stride=2, padding=1),
+        self.up_to2 = nn.Sequential(nn.Conv2d(ngf * 4 * 2, ngf * 2 * 4, kernel_size=3, stride=1, padding=1),
                                     nn.PixelShuffle(2),
                                     nn.ReLU(inplace=True),
                                     tunnel2)
@@ -147,12 +147,13 @@ class def_netG(nn.Module):
                    ResNeXtBottleneck(ngf, ngf, cardinality=8, dilate=1)]
         tunnel1 = nn.Sequential(*tunnel)
 
-        self.up_to1 = nn.Sequential(nn.Conv2d(ngf * 2 * 2, ngf * 4, kernel_size=4, stride=2, padding=1),
+        self.up_to1 = nn.Sequential(nn.Conv2d(ngf * 2 * 2, ngf * 4, kernel_size=3, stride=1, padding=1),
                                     nn.PixelShuffle(2),
                                     nn.ReLU(inplace=True),
                                     tunnel1)
 
-        self.exit = nn.ConvTranspose2d(ngf + ngf // 2, 3, kernel_size=4, stride=2, padding=1)
+        self.exit = nn.Sequential(nn.Conv2d(ngf + ngf // 2, 3 * 4, kernel_size=3, stride=1, padding=1),
+                                    nn.PixelShuffle(2))
 
     def forward(self, input, hint):
         v = self.downH(hint)
@@ -179,13 +180,13 @@ class def_netD(nn.Module):
             nn.Conv2d(4, ndf, kernel_size=4, stride=2, padding=1, bias=False),  # 128
             nn.LeakyReLU(0.2, True),
 
-            Tunnel(2, ndf, ndf),
+            Tunnel(1, ndf, ndf),
             DResNeXtBottleneck(ndf, ndf * 2, 2),  # 64
 
-            Tunnel(3, ndf * 2, ndf * 2),
+            Tunnel(2, ndf * 2, ndf * 2),
             DResNeXtBottleneck(ndf * 2, ndf * 4, 2),  # 32
 
-            Tunnel(4, ndf * 4, ndf * 4),
+            Tunnel(3, ndf * 4, ndf * 4),
             DResNeXtBottleneck(ndf * 4, ndf * 8, 2),  # 16
 
             Tunnel(4, ndf * 8, ndf * 8),

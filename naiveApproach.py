@@ -2,7 +2,7 @@ import argparse
 import os
 import random
 from math import log10
-
+import scipy.stats as stats
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
@@ -139,7 +139,10 @@ def calc_gradient_penalty(netD, real_data, fake_data):
 
 
 flag = 1
-
+lower, upper = 0, 1
+mu, sigma = 1, 0.06
+X = stats.truncnorm(
+    (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 for epoch in range(opt.niter):
     data_iter = iter(dataloader)
     i = 0
@@ -172,18 +175,16 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.7, 0.9)).float().cuda()
-            if random.random() < 0.4:
-                mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.9, 0.95)).float().cuda()
+            mask = torch.cat([torch.rand(1, 1, 64, 64).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)], 0).cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
 
             # train with fake
 
             fake_cim = netG(Variable(real_sim, volatile=True), Variable(hint, volatile=True)).data
-            errD_fake = netD(Variable(torch.cat((fake_cim, real_sim), 1)), Variable(hint)).mean(0).view(1)
+            errD_fake = netD(Variable(torch.cat((fake_cim, real_sim), 1))).mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_real = netD(Variable(torch.cat((real_cim, real_sim), 1)), Variable(hint)).mean(0).view(1)
+            errD_real = netD(Variable(torch.cat((real_cim, real_sim), 1))).mean(0).view(1)
             errD_real.backward(mone, retain_graph=True)  # backward on score on real
 
             errD = errD_real - errD_fake
@@ -192,7 +193,6 @@ for epoch in range(opt.niter):
             gradient_penalty = calc_gradient_penalty(netD, torch.cat([real_cim, real_sim], 1),
                                                      torch.cat([fake_cim, real_sim], 1))
             gradient_penalty.backward()
-
             optimizerD.step()
 
         ############################
@@ -211,10 +211,8 @@ for epoch in range(opt.niter):
 
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
-
-            mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.7, 0.9)).float().cuda()
-            if random.random() < 0.4:
-                mask = torch.rand(opt.batchSize, 1, 64, 64).ge(random.uniform(0.9, 0.95)).float().cuda()
+            
+            mask = torch.cat([torch.rand(1, 1, 64, 64).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)], 0).cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
 
             if flag:  # fix samples
@@ -241,7 +239,7 @@ for epoch in range(opt.niter):
                 # contentLoss.backward()
                 # errG = contentLoss
             else:
-                errG_fake_vec = netD(torch.cat((fake, Variable(real_sim)), 1), Variable(hint)).mean(0).view(
+                errG = netD(torch.cat((fake, Variable(real_sim)), 1)).mean(0).view(
                     1) * opt.advW  # TODO: what if???
                 errG.backward(mone, retain_graph=True)
 
@@ -272,12 +270,12 @@ for epoch in range(opt.niter):
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations,
                      errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
 
-        if gen_iterations % 100 == 0:
+        if gen_iterations % 500 == 0:
             fake = netG(Variable(fixed_sketch, volatile=True), Variable(fixed_hint, volatile=True))
             writer.add_image('deblur imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=16),
                              gen_iterations)
 
-        if gen_iterations % 1000 == 0:
+        if gen_iterations % 2000 == 0:
             for name, param in netG.named_parameters():
                 writer.add_histogram('netG ' + name, param.clone().cpu().data.numpy(), gen_iterations)
             for name, param in netD.named_parameters():

@@ -42,7 +42,11 @@ class RandomCrop(object):
             x1 = random.randint(0, w - tw)
             y1 = 0
             return img1.crop((x1, y1, x1 + tw, y1 + th)), img2.crop((x1, y1, x1 + tw, y1 + th))
-
+        
+        else:
+            x1 = random.randint(0, w - tw)
+            y1 = random.randint(0, h - th)
+            return img1.crop((x1, y1, x1 + tw, y1 + th)), img2.crop((x1, y1, x1 + tw, y1 + th))
 
 
 
@@ -114,7 +118,6 @@ class ImageFolder(data.Dataset):
         imgs = make_dataset(rootC, rootS)
         if len(imgs) == 0:
             raise (RuntimeError("Found 0 images in folders."))
-
         self.imgs = imgs
         self.transform = transform
         self.vtransform = vtransform
@@ -123,7 +126,7 @@ class ImageFolder(data.Dataset):
     def __getitem__(self, index):
         Cpath, Spath = self.imgs[index]
         Cimg, Simg = color_loader(Cpath), sketch_loader(Spath)
-        Cimg, Simg = RandomCrop(512)(Cimg, Simg)
+        Cimg, Simg = RandomCrop(511)(Cimg, Simg)
         if random.random() < 0.5:
             Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
         if random.random() < 0.5:
