@@ -20,8 +20,6 @@ parser.add_argument('--batchSize', type=int, default=16, help='input batch size'
 parser.add_argument('--imageSize', type=int, default=256, help='the height / width of the input image to network')
 parser.add_argument('--cut', type=int, default=1, help='cut backup frequency')
 parser.add_argument('--niter', type=int, default=700, help='number of epochs to train for')
-parser.add_argument('--normG', type=str, default='instance', help='normalization layer for Gnet')
-parser.add_argument('--normD', type=str, default='batch', help='normalization layer for Dnet')
 parser.add_argument('--ngf', type=int, default=64)
 parser.add_argument('--ndf', type=int, default=64)
 parser.add_argument('--lrG', type=float, default=0.0001, help='learning rate, default=0.0001')
@@ -65,12 +63,12 @@ writer = SummaryWriter(log_dir=opt.env, comment='this is great')
 
 dataloader = CreateDataLoader(opt)
 
-netG = def_netG(ngf=opt.ngf, norm=opt.normG)
+netG = def_netG(ngf=opt.ngf)
 if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
 print(netG)
 
-netD = def_netD(ndf=opt.ndf, norm=opt.normD)
+netD = def_netD(ndf=opt.ndf)
 if opt.netD != '':
     netD.load_state_dict(torch.load(opt.netD))
 print(netD)
