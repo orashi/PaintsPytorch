@@ -94,7 +94,7 @@ class def_netG(nn.Module):
     def __init__(self, ngf=64):
         super(def_netG, self).__init__()
 
-        down = [nn.Conv2d(7, ngf, kernel_size=3, stride=1, padding=1), nn.ReLU(inplace=True)]
+        down = [nn.Conv2d(4, ngf, kernel_size=7, stride=1, padding=1), nn.ReLU(inplace=True)]
         self.downH = nn.Sequential(*down)
 
         ################ downS
