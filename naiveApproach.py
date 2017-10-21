@@ -141,6 +141,7 @@ def calc_gradient_penalty(netD, real_data, fake_data):
 flag = 1
 lower, upper = 0, 1
 mu, sigma = 1, 0.01
+maskS = opt.imageSize // 4
 X = stats.truncnorm(
     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 for epoch in range(opt.niter):
@@ -175,7 +176,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.cat([torch.rand(1, 1, 64, 64).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)], 0).cuda()
+            mask = torch.cat([torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)], 0).cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
 
             # train with fake
@@ -212,7 +213,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
             
-            mask = torch.cat([torch.rand(1, 1, 64, 64).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)], 0).cuda()
+            mask = torch.cat([torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)], 0).cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
 
             if flag:  # fix samples

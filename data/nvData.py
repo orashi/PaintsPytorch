@@ -42,13 +42,11 @@ class RandomCrop(object):
             x1 = random.randint(0, w - tw)
             y1 = 0
             return img1.crop((x1, y1, x1 + tw, y1 + th)), img2.crop((x1, y1, x1 + tw, y1 + th))
-        
+
         else:
             x1 = random.randint(0, w - tw)
             y1 = random.randint(0, h - th)
             return img1.crop((x1, y1, x1 + tw, y1 + th)), img2.crop((x1, y1, x1 + tw, y1 + th))
-
-
 
 
 class RandomSizedCrop(object):
