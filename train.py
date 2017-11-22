@@ -142,7 +142,7 @@ def calc_gradient_penalty(netD, real_data, fake_data):
 flag = 1
 lower, upper = 0, 1
 mu, sigma = 1, 0.01
-maskS = opt.imageSize // 4
+maskS = opt.imageSize // 2
 X = stats.truncnorm(
     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 for epoch in range(opt.niter):
