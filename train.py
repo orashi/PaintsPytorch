@@ -10,7 +10,7 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
 from models.dev_model import *
-from data.nvData import CreateDataLoader
+from data.proData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--datarootC', required=True, help='path to colored dataset')
@@ -276,7 +276,7 @@ for epoch in range(opt.niter):
 
         if gen_iterations % 500 == 0:
             fake = netG(Variable(fixed_sketch, volatile=True), Variable(fixed_hint, volatile=True))
-            writer.add_image('colorized imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=16),
+            writer.add_image('deblur imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=16),
                              gen_iterations)
 
         if gen_iterations % 2000 == 0:
