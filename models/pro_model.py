@@ -33,7 +33,7 @@ class Tunnel(nn.Module):
     def __init__(self, len=1, *args):
         super(Tunnel, self).__init__()
 
-        tunnel = [DResNeXtBottleneck(*args) for _ in range(len)]
+        tunnel = [ResNeXtBottleneck(*args) for _ in range(len)]
         self.tunnel = nn.Sequential(*tunnel)
 
     def forward(self, x):
