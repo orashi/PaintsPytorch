@@ -66,7 +66,7 @@ class def_netG(nn.Module):
                                  nn.LeakyReLU(0.2, True))
         self.to2 = nn.Sequential(nn.Conv2d(ngf, ngf * 2, kernel_size=4, stride=2, padding=1),
                                  nn.LeakyReLU(0.2, True))
-        self.to3 = nn.Sequential(nn.Conv2d(ngf * 4, ngf * 4, kernel_size=4, stride=2, padding=1),
+        self.to3 = nn.Sequential(nn.Conv2d(ngf * 3, ngf * 4, kernel_size=4, stride=2, padding=1),
                                  nn.LeakyReLU(0.2, True))
         self.to4 = nn.Sequential(nn.Conv2d(ngf * 4, ngf * 8, kernel_size=4, stride=2, padding=1),
                                  nn.LeakyReLU(0.2, True))
