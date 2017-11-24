@@ -38,6 +38,8 @@ parser.add_argument('--epoi', type=int, default=0, help='continue epoch num')
 parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.0001, help='adversarial weight, default=0.0001')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
+parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
+parser.add_argument('--mseW', type=float, default=0.01, help='MSE loss weight')
 
 opt = parser.parse_args()
 print(opt)
@@ -116,10 +118,7 @@ if opt.optim:
 
 
 def calc_gradient_penalty(netD, real_data, fake_data):
-    # print "real_data: ", real_data.size(), fake_data.size()
     alpha = torch.rand(opt.batchSize, 1, 1, 1)
-    # alpha = alpha.expand(opt.batchSize, real_data.nelement() / opt.batchSize).contiguous().view(opt.batchSize, 3, 64,
-    #                                                                                             64)
     alpha = alpha.cuda() if opt.cuda else alpha
 
     interpolates = alpha * real_data + ((1 - alpha) * fake_data)
@@ -160,7 +159,7 @@ for epoch in range(opt.niter):
         # train the discriminator Diters times
         Diters = opt.Diters
 
-        if gen_iterations < opt.baseGeni:  # L1 stage
+        if gen_iterations < opt.baseGeni:  # L2 stage
             Diters = 0
 
         j = 0
@@ -188,9 +187,11 @@ for epoch in range(opt.niter):
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
             errD_real = netD(Variable(torch.cat((real_cim, real_sim), 1))).mean(0).view(1)
-            errD_real.backward(mone, retain_graph=True)  # backward on score on real
-
             errD = errD_real - errD_fake
+
+            errD_real = -1 * errD_real + errD_real.pow(2) * opt.drift
+            # additional penalty term to keep the scores from drifting too far from zero
+            errD_real.backward(one, retain_graph=True)  # backward on score on real
 
             # gradient penalty
             gradient_penalty = calc_gradient_penalty(netD, torch.cat([real_cim, real_sim], 1),
@@ -237,34 +238,34 @@ for epoch in range(opt.niter):
             if gen_iterations < opt.baseGeni:
                 contentLoss = criterion_L2(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                contentLoss.backward()
-                errG = contentLoss
-                # contentLoss = criterion_L1(fake, Variable(real_cim))
-                # contentLoss.backward()
-                # errG = contentLoss
+                MSELoss = criterion_L2(fake, real_cim)
+
+                errG = contentLoss + MSELoss * opt.mseW
+                errG.backward()
+
             else:
-                errG = netD(torch.cat((fake, Variable(real_sim)), 1)).mean(0).view(
-                    1) * opt.advW  # TODO: what if???
+                errG = netD(torch.cat((fake, Variable(real_sim)), 1)).mean(0).view(1) * opt.advW
                 errG.backward(mone, retain_graph=True)
 
                 contentLoss = criterion_L2(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                contentLoss.backward()
-                # contentLoss = criterion_L1(fake, Variable(real_cim))
-                # contentLoss.backward(retain_graph=True)
+                MSELoss = criterion_L2(fake, real_cim)
+                errg = contentLoss + MSELoss * opt.mseW
+                errg.backward()
 
             optimizerG.step()
 
         ############################
         # (3) Report & 100 Batch checkpoint
         ############################
-
         if gen_iterations < opt.baseGeni:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
+            writer.add_scalar('MSE Loss', MSELoss.data[0], gen_iterations)
             print('[%d/%d][%d/%d][%d] content %f '
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
+            writer.add_scalar('MSE Loss', MSELoss.data[0], gen_iterations)
             writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
             writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
             writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
