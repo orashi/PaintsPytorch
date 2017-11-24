@@ -36,7 +36,7 @@ parser.add_argument('--baseGeni', type=int, default=2500, help='start base of pu
 parser.add_argument('--geni', type=int, default=0, help='continue gen image num')
 parser.add_argument('--epoi', type=int, default=0, help='continue epoch num')
 parser.add_argument('--env', type=str, default=None, help='tensorboard env')
-parser.add_argument('--advW', type=float, default=0.0001, help='adversarial weight, default=0.0001')
+parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight, default=0.01')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
 parser.add_argument('--mseW', type=float, default=0.01, help='MSE loss weight')
@@ -238,7 +238,7 @@ for epoch in range(opt.niter):
             if gen_iterations < opt.baseGeni:
                 contentLoss = criterion_L2(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                MSELoss = criterion_L2(fake, real_cim)
+                MSELoss = criterion_L2(fake, Variable(real_cim))
 
                 errG = contentLoss + MSELoss * opt.mseW
                 errG.backward()
@@ -249,7 +249,7 @@ for epoch in range(opt.niter):
 
                 contentLoss = criterion_L2(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                MSELoss = criterion_L2(fake, real_cim)
+                MSELoss = criterion_L2(fake, Variable(real_cim))
                 errg = contentLoss + MSELoss * opt.mseW
                 errg.backward()
 
