@@ -20,7 +20,7 @@ class ResNeXtBottleneck(nn.Module):
                                    bias=False)
         self.conv_expand = nn.Conv2d(D, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
         self.shortcut = nn.Sequential()
-        if in_channels != out_channels:
+        if stride != 1:
             self.shortcut.add_module('shortcut',
                                      nn.AvgPool2d(2, stride=2))
 
@@ -153,11 +153,14 @@ class def_netD(nn.Module):
             nn.LeakyReLU(0.2, True),
 
             ResNeXtBottleneck(ndf, ndf, cardinality=8, dilate=1),
-            ResNeXtBottleneck(ndf, ndf * 2, cardinality=8, dilate=1, stride=2),  # 128
+            ResNeXtBottleneck(ndf, ndf, cardinality=8, dilate=1, stride=2),
+            nn.Conv2d(ndf, ndf * 2, kernel_size=1, stride=1, padding=0, bias=False),  # 128
             ResNeXtBottleneck(ndf * 2, ndf * 2, cardinality=8, dilate=1),
-            ResNeXtBottleneck(ndf * 2, ndf * 4, cardinality=8, dilate=1, stride=2),  # 64
+            ResNeXtBottleneck(ndf * 2, ndf * 2, cardinality=8, dilate=1, stride=2),
+            nn.Conv2d(ndf * 2, ndf * 4, kernel_size=1, stride=1, padding=0, bias=False),  # 64
             ResNeXtBottleneck(ndf * 4, ndf * 4, cardinality=8, dilate=1),
-            ResNeXtBottleneck(ndf * 4, ndf * 8, cardinality=8, dilate=1, stride=2),  # 32
+            ResNeXtBottleneck(ndf * 4, ndf * 4, cardinality=8, dilate=1, stride=2),
+            nn.Conv2d(ndf * 4, ndf * 8, kernel_size=1, stride=1, padding=0, bias=False),  # 32
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 16
         ]
@@ -165,7 +168,7 @@ class def_netD(nn.Module):
         self.model = nn.Sequential(*sequence)
 
         sequence = [
-            nn.Conv2d(ndf * 8 + 3, ndf * 8, kernel_size=3, stride=1, padding=1, bias=False),  # 256
+            nn.Conv2d(ndf * 8 + 3, ndf * 8, kernel_size=3, stride=1, padding=1, bias=False),  # 16
             nn.LeakyReLU(0.2, True),
 
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
@@ -173,7 +176,7 @@ class def_netD(nn.Module):
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 4
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
-            nn.Conv2d(ndf * 8, ndf * 8, kernel_size=4, stride=1, padding=0, bias=False),  # 256
+            nn.Conv2d(ndf * 8, ndf * 8, kernel_size=4, stride=1, padding=0, bias=False),  # 1
             nn.LeakyReLU(0.2, True),
 
         ]
