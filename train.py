@@ -117,7 +117,7 @@ if opt.optim:
 # schedulerD = lr_scheduler.MultiStepLR(optimizerD, milestones=[60, 120], gamma=0.1)
 
 
-def calc_gradient_penalty(netD, real_data, fake_data):
+def calc_gradient_penalty(netD, real_data, fake_data, sketch):
     alpha = torch.rand(opt.batchSize, 1, 1, 1)
     alpha = alpha.cuda() if opt.cuda else alpha
 
@@ -127,7 +127,7 @@ def calc_gradient_penalty(netD, real_data, fake_data):
         interpolates = interpolates.cuda()
     interpolates = Variable(interpolates, requires_grad=True)
 
-    disc_interpolates = netD(interpolates)
+    disc_interpolates = netD(interpolates, Variable(sketch))
 
     gradients = grad(outputs=disc_interpolates, inputs=interpolates,
                      grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
@@ -183,10 +183,10 @@ for epoch in range(opt.niter):
             # train with fake
 
             fake_cim = netG(Variable(real_sim, volatile=True), Variable(hint, volatile=True)).data
-            errD_fake = netD(Variable(torch.cat((fake_cim, real_sim), 1))).mean(0).view(1)
+            errD_fake = netD(Variable(fake_cim), Variable(real_sim)).mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_real = netD(Variable(torch.cat((real_cim, real_sim), 1))).mean(0).view(1)
+            errD_real = netD(Variable(real_cim), Variable(real_sim)).mean(0).view(1)
             errD = errD_real - errD_fake
 
             errD_real = -1 * errD_real + errD_real.pow(2) * opt.drift
@@ -194,8 +194,7 @@ for epoch in range(opt.niter):
             errD_real.backward(one, retain_graph=True)  # backward on score on real
 
             # gradient penalty
-            gradient_penalty = calc_gradient_penalty(netD, torch.cat([real_cim, real_sim], 1),
-                                                     torch.cat([fake_cim, real_sim], 1))
+            gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, real_sim)
             gradient_penalty.backward()
             optimizerD.step()
 
@@ -244,7 +243,7 @@ for epoch in range(opt.niter):
                 errG.backward()
 
             else:
-                errG = netD(torch.cat((fake, Variable(real_sim)), 1)).mean(0).view(1) * opt.advW
+                errG = netD(fake, Variable(real_sim)).mean(0).view(1) * opt.advW
                 errG.backward(mone, retain_graph=True)
 
                 contentLoss = criterion_L2(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
