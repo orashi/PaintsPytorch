@@ -80,6 +80,7 @@ print(netD)
 
 criterion_L1 = nn.L1Loss()
 criterion_L2 = nn.MSELoss()
+L2_dist = nn.PairwiseDistance(2)
 one = torch.FloatTensor([1])
 mone = one * -1
 
@@ -189,13 +190,21 @@ for epoch in range(opt.niter):
             errD_real = netD(Variable(real_cim), Variable(real_sim)).mean(0).view(1)
             errD = errD_real - errD_fake
 
-            errD_real = -1 * errD_real + errD_real.pow(2) * opt.drift
+            errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift
             # additional penalty term to keep the scores from drifting too far from zero
-            errD_real.backward(one, retain_graph=True)  # backward on score on real
+            errD_realer.backward(one, retain_graph=True)  # backward on score on real
 
-            # gradient penalty
-            gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, real_sim)
-            gradient_penalty.backward()
+            # gradient penalty  temporarily failed
+            # gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, real_sim)
+            # gradient_penalty.backward()
+
+            dist = L2_dist(Variable(real_cim), fake_cim)
+            lip_est = (errD_real - errD_fake).abs() / (dist + 1e-8)
+            lip_loss = opt.gpW * ((1.0 - lip_est) ** 2).mean(0).view(1)
+            lip_loss.backward(one)
+            gradient_penalty = lip_loss
+            # above is approximation
+
             optimizerD.step()
 
         ############################
