@@ -192,7 +192,8 @@ class def_netD(nn.Module):
         self.out = nn.Linear(512, 1)
 
     def forward(self, color, sketch):
-        color = F.avg_pool2d(color, 16, 16)
+        color = F.avg_pool2d(color, 32, 32)
+        sketch = F.avg_pool2d(sketch, 2, 2)
         sketch = self.model(sketch)
         out = self.prototype(torch.cat([sketch, color], 1))
         return self.out(out.view(color.size(0), -1))
