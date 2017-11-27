@@ -67,9 +67,9 @@ class def_netG(nn.Module):
 
         self.toH = nn.Sequential(nn.Conv2d(4, ngf, kernel_size=7, stride=1, padding=3), nn.LeakyReLU(0.2, True))
 
-        self.to0 = nn.Sequential(nn.Conv2d(1, ngf, kernel_size=3, stride=1, padding=1),
+        self.to0 = nn.Sequential(nn.Conv2d(1, ngf // 2, kernel_size=3, stride=1, padding=1),
                                  nn.LeakyReLU(0.2, True))
-        self.to1 = nn.Sequential(nn.Conv2d(ngf, ngf, kernel_size=4, stride=2, padding=1),
+        self.to1 = nn.Sequential(nn.Conv2d(ngf // 2, ngf, kernel_size=4, stride=2, padding=1),
                                  nn.LeakyReLU(0.2, True))
         self.to2 = nn.Sequential(nn.Conv2d(ngf, ngf * 2, kernel_size=4, stride=2, padding=1),
                                  nn.LeakyReLU(0.2, True))
@@ -125,7 +125,7 @@ class def_netG(nn.Module):
         self.tunnel1 = nn.Sequential(nn.Conv2d(ngf * 2, ngf, kernel_size=3, stride=1, padding=1),
                                      nn.LeakyReLU(0.2, True),
                                      tunnel1,
-                                     nn.Conv2d(ngf, ngf * 4, kernel_size=3, stride=1, padding=1),
+                                     nn.Conv2d(ngf, ngf * 2, kernel_size=3, stride=1, padding=1),
                                      nn.PixelShuffle(2),
                                      nn.LeakyReLU(0.2, True)
                                      )
