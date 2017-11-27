@@ -17,7 +17,7 @@ parser.add_argument('--datarootC', required=True, help='path to colored dataset'
 parser.add_argument('--datarootS', required=True, help='path to sketch dataset')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=4)
 parser.add_argument('--batchSize', type=int, default=16, help='input batch size')
-parser.add_argument('--imageSize', type=int, default=256, help='the height / width of the input image to network')
+parser.add_argument('--imageSize', type=int, default=512, help='the height / width of the input image to network')
 parser.add_argument('--cut', type=int, default=1, help='cut backup frequency')
 parser.add_argument('--niter', type=int, default=700, help='number of epochs to train for')
 parser.add_argument('--ngf', type=int, default=64)
@@ -142,7 +142,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch):
 flag = 1
 lower, upper = 0, 1
 mu, sigma = 1, 0.0012
-maskS = opt.imageSize // 2
+maskS = opt.imageSize // 4
 X = stats.truncnorm(
     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 for epoch in range(opt.niter):
@@ -198,12 +198,12 @@ for epoch in range(opt.niter):
             # gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, real_sim)
             # gradient_penalty.backward()
 
-            dist = L2_dist(Variable(real_cim), fake_cim)
+            dist = L2_dist(Variable(real_cim).view(opt.batchSize, -1), Variable(fake_cim).view(opt.batchSize, -1)).mean()
             lip_est = (errD_real - errD_fake).abs() / (dist + 1e-8)
             lip_loss = opt.gpW * ((1.0 - lip_est) ** 2).mean(0).view(1)
             lip_loss.backward(one)
             gradient_penalty = lip_loss
-            # above is approximation
+            # above is approximation 
 
             optimizerD.step()
 

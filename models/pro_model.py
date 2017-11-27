@@ -67,7 +67,9 @@ class def_netG(nn.Module):
 
         self.toH = nn.Sequential(nn.Conv2d(4, ngf, kernel_size=7, stride=1, padding=3), nn.LeakyReLU(0.2, True))
 
-        self.to1 = nn.Sequential(nn.Conv2d(1, ngf, kernel_size=3, stride=1, padding=1),
+        self.to0 = nn.Sequential(nn.Conv2d(1, ngf, kernel_size=3, stride=1, padding=1),
+                                 nn.LeakyReLU(0.2, True))
+        self.to1 = nn.Sequential(nn.Conv2d(ngf, ngf, kernel_size=4, stride=2, padding=1),
                                  nn.LeakyReLU(0.2, True))
         self.to2 = nn.Sequential(nn.Conv2d(ngf, ngf * 2, kernel_size=4, stride=2, padding=1),
                                  nn.LeakyReLU(0.2, True))
@@ -123,14 +125,18 @@ class def_netG(nn.Module):
         self.tunnel1 = nn.Sequential(nn.Conv2d(ngf * 2, ngf, kernel_size=3, stride=1, padding=1),
                                      nn.LeakyReLU(0.2, True),
                                      tunnel1,
+                                     nn.Conv2d(ngf, ngf * 4, kernel_size=3, stride=1, padding=1),
+                                     nn.PixelShuffle(2),
+                                     nn.LeakyReLU(0.2, True)
                                      )
 
         self.exit = nn.Conv2d(ngf, 3, kernel_size=3, stride=1, padding=1)
 
-    def forward(self, x1, hint):
+    def forward(self, x, hint):
         v = self.toH(hint)
 
-        x1 = self.to1(x1)
+        x0 = self.to0(x)
+        x1 = self.to1(x0)
         x2 = self.to2(x1)
         x3 = self.to3(torch.cat([x2, v], 1))
         x4 = self.to4(x3)
@@ -140,7 +146,7 @@ class def_netG(nn.Module):
         x = self.tunnel3(torch.cat([x, x3.detach()], 1))
         x = self.tunnel2(torch.cat([x, x2.detach()], 1))
         x = self.tunnel1(torch.cat([x, x1.detach()], 1))
-        x = F.tanh(self.exit(x))
+        x = F.tanh(self.exit(torch.cat([x, x0.detach()], 1)))
         return x
 
 
