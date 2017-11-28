@@ -155,7 +155,7 @@ class def_netD(nn.Module):
         super(def_netD, self).__init__()
 
         sequence = [
-            nn.Conv2d(1, ndf, kernel_size=3, stride=1, padding=1, bias=False),  # 256
+            nn.Conv2d(1, ndf, kernel_size=4, stride=2, padding=1, bias=False),  # 256
             nn.LeakyReLU(0.2, True),
 
             ResNeXtBottleneck(ndf, ndf, cardinality=8, dilate=1),
@@ -166,17 +166,19 @@ class def_netD(nn.Module):
             nn.Conv2d(ndf * 2, ndf * 4, kernel_size=1, stride=1, padding=0, bias=False),  # 64
             ResNeXtBottleneck(ndf * 4, ndf * 4, cardinality=8, dilate=1),
             ResNeXtBottleneck(ndf * 4, ndf * 4, cardinality=8, dilate=1, stride=2),
-            nn.Conv2d(ndf * 4, ndf * 8, kernel_size=1, stride=1, padding=0, bias=False),  # 32
-            ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
-            ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 16
+            # nn.Conv2d(ndf * 4, ndf * 8, kernel_size=1, stride=1, padding=0, bias=False),  # 32
+            # ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
+            # ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 16
         ]
 
         self.model = nn.Sequential(*sequence)
 
         sequence = [
-            nn.Conv2d(ndf * 8 + 3, ndf * 8, kernel_size=3, stride=1, padding=1, bias=False),  # 16
+            nn.Conv2d(ndf * 4 + 3, ndf * 8, kernel_size=3, stride=1, padding=1, bias=False),  # 32
             nn.LeakyReLU(0.2, True),
 
+            ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
+            ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 16
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 8
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
@@ -192,8 +194,7 @@ class def_netD(nn.Module):
         self.out = nn.Linear(512, 1)
 
     def forward(self, color, sketch):
-        color = F.avg_pool2d(color, 32, 32)
-        sketch = F.avg_pool2d(sketch, 2, 2)
+        color = F.avg_pool2d(color, 16, 16)
         sketch = self.model(sketch)
         out = self.prototype(torch.cat([sketch, color], 1))
         return self.out(out.view(color.size(0), -1))
