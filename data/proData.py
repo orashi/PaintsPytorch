@@ -100,77 +100,81 @@ def make_dataset(Cdir, Sdir):
             if is_image_file(fname):
                 images.append((os.path.join(Cdir, fname), os.path.join(Sdir, fname),
                                os.path.join(Sdir + '4', fname), os.path.join(Sdir + '3', fname)))
-            return images
+    return images
 
-    def color_loader(path):
-        return Image.open(path).convert('RGB')
 
-    def sketch_loader(path):
-        return Image.open(path).convert('L')
+def color_loader(path):
+    return Image.open(path).convert('RGB')
 
-    class ImageFolder(data.Dataset):
-        def __init__(self, rootC, rootS, transform=None, vtransform=None, stransform=None):
-            imgs = make_dataset(rootC, rootS)
-            if len(imgs) == 0:
-                raise (RuntimeError("Found 0 images in folders."))
-            self.imgs = imgs
-            self.transform = transform
-            self.vtransform = vtransform
-            self.stransform = stransform
 
-        def __getitem__(self, index):
-            Cpath, Spath = self.imgs[index][0], self.imgs[index][random.randint(1, 3)]
-            Cimg, Simg = color_loader(Cpath), sketch_loader(Spath)
-            Cimg, Simg = RandomCrop(511)(Cimg, Simg)
-            if random.random() < 0.5:
-                Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
-            if random.random() < 0.5:
-                Cimg, Simg = Cimg.transpose(Image.FLIP_TOP_BOTTOM), Simg.transpose(Image.FLIP_TOP_BOTTOM)
-            if random.random() < 0.5:
-                Cimg, Simg = Cimg.transpose(Image.ROTATE_90), Simg.transpose(Image.ROTATE_90)
+def sketch_loader(path):
+    return Image.open(path).convert('L')
 
-            Cimg, Vimg, Simg = self.transform(Cimg), self.vtransform(Cimg), self.stransform(Simg)
 
-            return Cimg, Vimg, Simg
+class ImageFolder(data.Dataset):
+    def __init__(self, rootC, rootS, transform=None, vtransform=None, stransform=None):
+        imgs = make_dataset(rootC, rootS)
+        if len(imgs) == 0:
+            raise (RuntimeError("Found 0 images in folders."))
+        self.imgs = imgs
+        self.transform = transform
+        self.vtransform = vtransform
+        self.stransform = stransform
 
-        def __len__(self):
-            return len(self.imgs)
+    def __getitem__(self, index):
+        Cpath, Spath = self.imgs[index][0], self.imgs[index][random.randint(1, 3)]
+        Cimg, Simg = color_loader(Cpath), sketch_loader(Spath)
+        Cimg, Simg = RandomCrop(511)(Cimg, Simg)
+        if random.random() < 0.5:
+            Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
+        if random.random() < 0.5:
+            Cimg, Simg = Cimg.transpose(Image.FLIP_TOP_BOTTOM), Simg.transpose(Image.FLIP_TOP_BOTTOM)
+        if random.random() < 0.5:
+            Cimg, Simg = Cimg.transpose(Image.ROTATE_90), Simg.transpose(Image.ROTATE_90)
 
-    def CreateDataLoader(opt):
-        random.seed(opt.manualSeed)
+        Cimg, Vimg, Simg = self.transform(Cimg), self.vtransform(Cimg), self.stransform(Simg)
 
-        # folder dataset
-        CTrans = transforms.Compose([
-            transforms.Scale(opt.imageSize, Image.BICUBIC),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ])
+        return Cimg, Vimg, Simg
 
-        VTrans = transforms.Compose([
-            RandomSizedCrop(opt.imageSize // 4, Image.BICUBIC),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ])
+    def __len__(self):
+        return len(self.imgs)
 
-        def jitter(x):
-            ran = random.uniform(0.7, 1)
-            return x * ran + 1 - ran
 
-        STrans = transforms.Compose([
-            transforms.Scale(opt.imageSize, Image.BICUBIC),
-            transforms.ToTensor(),
-            transforms.Lambda(jitter),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ])
+def CreateDataLoader(opt):
+    random.seed(opt.manualSeed)
 
-        dataset = ImageFolder(rootC=opt.datarootC,
-                              rootS=opt.datarootS,
-                              transform=CTrans,
-                              vtransform=VTrans,
-                              stransform=STrans
-                              )
+    # folder dataset
+    CTrans = transforms.Compose([
+        transforms.Scale(opt.imageSize, Image.BICUBIC),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
 
-        assert dataset
+    VTrans = transforms.Compose([
+        RandomSizedCrop(opt.imageSize // 4, Image.BICUBIC),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
 
-        return data.DataLoader(dataset, batch_size=opt.batchSize,
-                               shuffle=True, num_workers=int(opt.workers), drop_last=True)
+    def jitter(x):
+        ran = random.uniform(0.7, 1)
+        return x * ran + 1 - ran
+
+    STrans = transforms.Compose([
+        transforms.Scale(opt.imageSize, Image.BICUBIC),
+        transforms.ToTensor(),
+        transforms.Lambda(jitter),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+
+    dataset = ImageFolder(rootC=opt.datarootC,
+                          rootS=opt.datarootS,
+                          transform=CTrans,
+                          vtransform=VTrans,
+                          stransform=STrans
+                          )
+
+    assert dataset
+
+    return data.DataLoader(dataset, batch_size=opt.batchSize,
+                           shuffle=True, num_workers=int(opt.workers), drop_last=True)
