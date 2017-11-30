@@ -140,6 +140,3 @@ def CreateDataLoader(opt):
 
     return data.DataLoader(dataset, batch_size=opt.batchSize,
                            shuffle=True, num_workers=int(opt.workers), drop_last=True)
-
-
-
