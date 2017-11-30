@@ -98,77 +98,79 @@ def make_dataset(Cdir, Sdir):
     for _, __, fnames in sorted(os.walk(Sdir)):
         for fname in fnames:
             if is_image_file(fname):
-                Cpath, Spath = os.path.join(Cdir, fname), os.path.join(Sdir, fname)
-                images.append((Cpath, Spath))
-    return images
+                images.append((os.path.join(Cdir, fname), os.path.join(Sdir, fname),
+                               os.path.join(Sdir + '4', fname), os.path.join(Sdir + '3', fname)))
+            return images
 
+    def color_loader(path):
+        return Image.open(path).convert('RGB')
 
-def color_loader(path):
-    return Image.open(path).convert('RGB')
+    def sketch_loader(path):
+        return Image.open(path).convert('L')
 
+    class ImageFolder(data.Dataset):
+        def __init__(self, rootC, rootS, transform=None, vtransform=None, stransform=None):
+            imgs = make_dataset(rootC, rootS)
+            if len(imgs) == 0:
+                raise (RuntimeError("Found 0 images in folders."))
+            self.imgs = imgs
+            self.transform = transform
+            self.vtransform = vtransform
+            self.stransform = stransform
 
-def sketch_loader(path):
-    return Image.open(path).convert('L')
+        def __getitem__(self, index):
+            Cpath, Spath = self.imgs[index][0], self.imgs[index][random.randint(1, 3)]
+            Cimg, Simg = color_loader(Cpath), sketch_loader(Spath)
+            Cimg, Simg = RandomCrop(511)(Cimg, Simg)
+            if random.random() < 0.5:
+                Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
+            if random.random() < 0.5:
+                Cimg, Simg = Cimg.transpose(Image.FLIP_TOP_BOTTOM), Simg.transpose(Image.FLIP_TOP_BOTTOM)
+            if random.random() < 0.5:
+                Cimg, Simg = Cimg.transpose(Image.ROTATE_90), Simg.transpose(Image.ROTATE_90)
 
+            Cimg, Vimg, Simg = self.transform(Cimg), self.vtransform(Cimg), self.stransform(Simg)
 
-class ImageFolder(data.Dataset):
-    def __init__(self, rootC, rootS, transform=None, vtransform=None, stransform=None):
-        imgs = make_dataset(rootC, rootS)
-        if len(imgs) == 0:
-            raise (RuntimeError("Found 0 images in folders."))
-        self.imgs = imgs
-        self.transform = transform
-        self.vtransform = vtransform
-        self.stransform = stransform
+            return Cimg, Vimg, Simg
 
-    def __getitem__(self, index):
-        Cpath, Spath = self.imgs[index]
-        Cimg, Simg = color_loader(Cpath), sketch_loader(Spath)
-        Cimg, Simg = RandomCrop(511)(Cimg, Simg)
-        if random.random() < 0.5:
-            Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
-        if random.random() < 0.5:
-            Cimg, Simg = Cimg.transpose(Image.FLIP_TOP_BOTTOM), Simg.transpose(Image.FLIP_TOP_BOTTOM)
-        # if random.random() < 0.5:
-        #     Vimg = Vimg.transpose(Image.ROTATE_90)
-        Cimg, Vimg, Simg = self.transform(Cimg), self.vtransform(Cimg), self.stransform(Simg)
+        def __len__(self):
+            return len(self.imgs)
 
-        return Cimg, Vimg, Simg
+    def CreateDataLoader(opt):
+        random.seed(opt.manualSeed)
 
-    def __len__(self):
-        return len(self.imgs)
+        # folder dataset
+        CTrans = transforms.Compose([
+            transforms.Scale(opt.imageSize, Image.BICUBIC),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
 
+        VTrans = transforms.Compose([
+            RandomSizedCrop(opt.imageSize // 4, Image.BICUBIC),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
 
-def CreateDataLoader(opt):
-    random.seed(opt.manualSeed)
+        def jitter(x):
+            ran = random.uniform(0.7, 1)
+            return x * ran + 1 - ran
 
-    # folder dataset
-    CTrans = transforms.Compose([
-        transforms.Scale(opt.imageSize, Image.BICUBIC),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
+        STrans = transforms.Compose([
+            transforms.Scale(opt.imageSize, Image.BICUBIC),
+            transforms.ToTensor(),
+            transforms.Lambda(jitter),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
 
-    VTrans = transforms.Compose([
-        RandomSizedCrop(opt.imageSize // 4, Image.BICUBIC),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
+        dataset = ImageFolder(rootC=opt.datarootC,
+                              rootS=opt.datarootS,
+                              transform=CTrans,
+                              vtransform=VTrans,
+                              stransform=STrans
+                              )
 
-    STrans = transforms.Compose([
-        transforms.Scale(opt.imageSize, Image.BICUBIC),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
+        assert dataset
 
-    dataset = ImageFolder(rootC=opt.datarootC,
-                          rootS=opt.datarootS,
-                          transform=CTrans,
-                          vtransform=VTrans,
-                          stransform=STrans
-                          )
-
-    assert dataset
-
-    return data.DataLoader(dataset, batch_size=opt.batchSize,
-                           shuffle=True, num_workers=int(opt.workers), drop_last=True)
+        return data.DataLoader(dataset, batch_size=opt.batchSize,
+                               shuffle=True, num_workers=int(opt.workers), drop_last=True)
