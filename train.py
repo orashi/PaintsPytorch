@@ -141,10 +141,11 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch):
 
 flag = 1
 lower, upper = 0, 1
-mu, sigma = 1, 0.01
+mu, sigma = 1,  0.005
 maskS = opt.imageSize // 4
 X = stats.truncnorm(
     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+
 for epoch in range(opt.niter):
     data_iter = iter(dataloader)
     i = 0
@@ -198,7 +199,8 @@ for epoch in range(opt.niter):
             # gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, real_sim)
             # gradient_penalty.backward()
 
-            dist = L2_dist(Variable(real_cim).view(opt.batchSize, -1), Variable(fake_cim).view(opt.batchSize, -1)).mean()
+            dist = L2_dist(Variable(real_cim).view(opt.batchSize, -1),
+                           Variable(fake_cim).view(opt.batchSize, -1)).mean()
             lip_est = (errD_real - errD_fake).abs() / (dist + 1e-8)
             lip_loss = opt.gpW * ((1.0 - lip_est) ** 2).mean(0).view(1)
             lip_loss.backward(one)
@@ -211,6 +213,31 @@ for epoch in range(opt.niter):
         # (2) Update G network
         ############################
         if i < len(dataloader):
+            if flag:  # fix samples
+                data = zip(*[data_iter.next() for _ in range(4)])
+                real_cim, real_vim, real_sim = [torch.cat(dat, 0) for dat in data]
+                i += 1
+
+                if opt.cuda:
+                    real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
+
+                mask = torch.cat(
+                    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize * 4)],
+                    0).cuda()
+                hint = torch.cat((real_vim * mask, mask), 1)
+
+                writer.add_image('target imgs', vutils.make_grid(real_cim.mul(0.5).add(0.5), nrow=4))
+                writer.add_image('sketch imgs', vutils.make_grid(real_sim.mul(0.5).add(0.5), nrow=4))
+                writer.add_image('hint', vutils.make_grid((real_vim * mask).mul(0.5).add(0.5), nrow=4))
+                vutils.save_image(real_cim.mul(0.5).add(0.5),
+                                  '%s/color_samples' % opt.outf + '.png')
+                vutils.save_image(real_sim.mul(0.5).add(0.5),
+                                  '%s/blur_samples' % opt.outf + '.png')
+                fixed_sketch.resize_as_(real_sim).copy_(real_sim)
+                fixed_hint.resize_as_(hint).copy_(hint)
+
+                flag -= 1
+
             for p in netD.parameters():
                 p.requires_grad = False  # to avoid computation
             for p in netG.parameters():
@@ -227,19 +254,6 @@ for epoch in range(opt.niter):
             mask = torch.cat([torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)],
                              0).cuda()
             hint = torch.cat((real_vim * mask, mask), 1)
-
-            if flag:  # fix samples
-                writer.add_image('target imgs', vutils.make_grid(real_cim.mul(0.5).add(0.5), nrow=16))
-                writer.add_image('sketch imgs', vutils.make_grid(real_sim.mul(0.5).add(0.5), nrow=16))
-                writer.add_image('hint', vutils.make_grid((real_vim * mask).mul(0.5).add(0.5), nrow=16))
-                vutils.save_image(real_cim.mul(0.5).add(0.5),
-                                  '%s/color_samples' % opt.outf + '.png')
-                vutils.save_image(real_sim.mul(0.5).add(0.5),
-                                  '%s/blur_samples' % opt.outf + '.png')
-                fixed_sketch.resize_as_(real_sim).copy_(real_sim)
-                fixed_hint.resize_as_(hint).copy_(hint)
-
-                flag -= 1
 
             fake = netG(Variable(real_sim), Variable(hint))
 
@@ -285,7 +299,7 @@ for epoch in range(opt.niter):
 
         if gen_iterations % 500 == 0:
             fake = netG(Variable(fixed_sketch, volatile=True), Variable(fixed_hint, volatile=True))
-            writer.add_image('deblur imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=16),
+            writer.add_image('deblur imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),
                              gen_iterations)
 
         if gen_iterations % 2000 == 0:
