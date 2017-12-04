@@ -149,7 +149,7 @@ X = stats.truncnorm(
 for epoch in range(opt.niter):
     data_iter = iter(dataloader)
     i = 0
-    while i < len(dataloader):
+    while i < len(dataloader) - 4:
         ############################
         # (1) Update D network
         ###########################
@@ -165,7 +165,7 @@ for epoch in range(opt.niter):
             Diters = 0
 
         j = 0
-        while j < Diters and i < len(dataloader):
+        while j < Diters and i < len(dataloader) - 4:
 
             j += 1
             netD.zero_grad()
@@ -212,7 +212,7 @@ for epoch in range(opt.niter):
         ############################
         # (2) Update G network
         ############################
-        if i < len(dataloader):
+        if i < len(dataloader) - 4:
             if flag:  # fix samples
                 data = zip(*[data_iter.next() for _ in range(4)])
                 real_cim, real_vim, real_sim = [torch.cat(dat, 0) for dat in data]
