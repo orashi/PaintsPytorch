@@ -310,13 +310,13 @@ for epoch in range(opt.niter):
             writer.add_image('deblur imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),
                              gen_iterations)
 
-        if gen_iterations % 2000 == 0:
-            for name, param in netG.named_parameters():
-                writer.add_histogram('netG ' + name, param.clone().cpu().data.numpy(), gen_iterations)
-            for name, param in netD.named_parameters():
-                writer.add_histogram('netD ' + name, param.clone().cpu().data.numpy(), gen_iterations)
-            vutils.save_image(fake.data.mul(0.5).add(0.5),
-                              '%s/fake_samples_gen_iter_%08d.png' % (opt.outf, gen_iterations))
+        # if gen_iterations % 2000 == 0:
+        #     for name, param in netG.named_parameters():
+        #         writer.add_histogram('netG ' + name, param.clone().cpu().data.numpy(), gen_iterations)
+        #     for name, param in netD.named_parameters():
+        #         writer.add_histogram('netD ' + name, param.clone().cpu().data.numpy(), gen_iterations)
+        #     vutils.save_image(fake.data.mul(0.5).add(0.5),
+        #                       '%s/fake_samples_gen_iter_%08d.png' % (opt.outf, gen_iterations))
         gen_iterations += 1
 
     # do checkpointing
