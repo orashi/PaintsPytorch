@@ -40,6 +40,8 @@ parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
 parser.add_argument('--mseW', type=float, default=0.01, help='MSE loss weight')
+parser.add_argument('--MSE', action='store_true', help='enables pure MSE')
+
 
 opt = parser.parse_args()
 print(opt)
@@ -141,7 +143,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch):
 
 flag = 1
 lower, upper = 0, 1
-mu, sigma = 1,  0.005
+mu, sigma = 1, 0.005
 maskS = opt.imageSize // 4
 X = stats.truncnorm(
     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
@@ -257,7 +259,13 @@ for epoch in range(opt.niter):
 
             fake = netG(Variable(real_sim), Variable(hint))
 
-            if gen_iterations < opt.baseGeni:
+            if opt.MSE:
+                MSELoss = criterion_L2(fake, Variable(real_cim))
+
+                errG = MSELoss
+                errG.backward()
+                contentLoss = MSELoss
+            elif gen_iterations < opt.baseGeni:
                 contentLoss = criterion_L2(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
                 MSELoss = criterion_L2(fake, Variable(real_cim))
@@ -302,13 +310,13 @@ for epoch in range(opt.niter):
             writer.add_image('deblur imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),
                              gen_iterations)
 
-        if gen_iterations % 2000 == 0:
-            for name, param in netG.named_parameters():
-                writer.add_histogram('netG ' + name, param.clone().cpu().data.numpy(), gen_iterations)
-            for name, param in netD.named_parameters():
-                writer.add_histogram('netD ' + name, param.clone().cpu().data.numpy(), gen_iterations)
-            vutils.save_image(fake.data.mul(0.5).add(0.5),
-                              '%s/fake_samples_gen_iter_%08d.png' % (opt.outf, gen_iterations))
+        # if gen_iterations % 2000 == 0:
+        #     for name, param in netG.named_parameters():
+        #         writer.add_histogram('netG ' + name, param.clone().cpu().data.numpy(), gen_iterations)
+        #     for name, param in netD.named_parameters():
+        #         writer.add_histogram('netD ' + name, param.clone().cpu().data.numpy(), gen_iterations)
+        #     vutils.save_image(fake.data.mul(0.5).add(0.5),
+        #                       '%s/fake_samples_gen_iter_%08d.png' % (opt.outf, gen_iterations))
         gen_iterations += 1
 
     # do checkpointing
