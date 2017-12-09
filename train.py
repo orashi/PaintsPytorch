@@ -9,7 +9,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
-from models.pro_model import *
+from models.ins_model import *
 from data.proData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
