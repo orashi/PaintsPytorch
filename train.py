@@ -9,7 +9,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
-from models.ins_model import *
+from models.feat_model import *
 from data.proData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
@@ -81,7 +81,7 @@ netF = def_netF()
 print(netD)
 
 criterion_L1 = nn.L1Loss()
-criterion_L2 = nn.MSELoss()
+criterion_MSE = nn.MSELoss()
 L2_dist = nn.PairwiseDistance(2)
 one = torch.FloatTensor([1])
 mone = one * -1
@@ -98,7 +98,7 @@ if opt.cuda:
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
     saber, diver = saber.cuda(), diver.cuda()
     criterion_L1.cuda()
-    criterion_L2.cuda()
+    criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
 
 # setup optimizer
@@ -260,15 +260,15 @@ for epoch in range(opt.niter):
             fake = netG(Variable(real_sim), Variable(hint))
 
             if opt.MSE:
-                MSELoss = criterion_L2(fake, Variable(real_cim))
+                MSELoss = criterion_MSE(fake, Variable(real_cim))
 
                 errG = MSELoss
                 errG.backward()
                 contentLoss = MSELoss
             elif gen_iterations < opt.baseGeni:
-                contentLoss = criterion_L2(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
+                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                MSELoss = criterion_L2(fake, Variable(real_cim))
+                MSELoss = criterion_MSE(fake, Variable(real_cim))
 
                 errG = contentLoss + MSELoss * opt.mseW
                 errG.backward()
@@ -277,9 +277,9 @@ for epoch in range(opt.niter):
                 errG = netD(fake, Variable(real_sim)).mean(0).view(1) * opt.advW
                 errG.backward(mone, retain_graph=True)
 
-                contentLoss = criterion_L2(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
+                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                MSELoss = criterion_L2(fake, Variable(real_cim))
+                MSELoss = criterion_MSE(fake, Variable(real_cim))
                 errg = contentLoss + MSELoss * opt.mseW
                 errg.backward()
 
