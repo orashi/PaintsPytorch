@@ -204,7 +204,18 @@ def def_netF():
     vgg16 = M.vgg16()
     vgg16.load_state_dict(torch.load('vgg16-397923af.pth'))
     vgg16.features = nn.Sequential(
-        *list(vgg16.features.children())[:16]
+        *list(vgg16.features.children())[:5]
+    )
+    for param in vgg16.parameters():
+        param.requires_grad = False
+    return vgg16.features
+
+
+def def_netF2():
+    vgg16 = M.vgg16()
+    vgg16.load_state_dict(torch.load('vgg16-397923af.pth'))
+    vgg16.features = nn.Sequential(
+        *list(vgg16.features.children())[:23]
     )
     for param in vgg16.parameters():
         param.requires_grad = False

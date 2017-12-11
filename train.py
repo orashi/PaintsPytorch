@@ -41,7 +41,7 @@ parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weig
 parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
 parser.add_argument('--mseW', type=float, default=0.01, help='MSE loss weight')
 parser.add_argument('--MSE', action='store_true', help='enables pure MSE')
-
+parser.add_argument('--feat', action='store_true', help='enables feat test')
 
 opt = parser.parse_args()
 print(opt)
@@ -100,6 +100,9 @@ if opt.cuda:
     criterion_L1.cuda()
     criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
+
+if opt.feat:
+    netF2 = def_netF2().cuda()
 
 # setup optimizer
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.9))
@@ -265,9 +268,17 @@ for epoch in range(opt.niter):
                 errG = MSELoss
                 errG.backward()
                 contentLoss = MSELoss
+            elif opt.feat:
+                contentLoss = criterion_MSE(netF2((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
+                                            netF2(Variable((real_cim.mul(0.5) - saber) / diver)))
+                MSELoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
+                                        netF(Variable((real_cim.mul(0.5) - saber) / diver)))
+
+                errG = (contentLoss + MSELoss) * 0.5
+                errG.backward()
             elif gen_iterations < opt.baseGeni:
                 contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                           netF(Variable((real_cim.mul(0.5) - saber) / diver)))
+                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
                 MSELoss = criterion_MSE(fake, Variable(real_cim))
 
                 errG = contentLoss + MSELoss * opt.mseW
@@ -278,7 +289,7 @@ for epoch in range(opt.niter):
                 errG.backward(mone, retain_graph=True)
 
                 contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                           netF(Variable((real_cim.mul(0.5) - saber) / diver)))
+                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
                 MSELoss = criterion_MSE(fake, Variable(real_cim))
                 errg = contentLoss + MSELoss * opt.mseW
                 errg.backward()
