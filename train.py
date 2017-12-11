@@ -256,8 +256,10 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.cat([torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)],
-                             0).cuda()
+            mask1 = torch.cat(
+                [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize // 2)], 0).cuda()
+            mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)], 0).cuda()
+            mask = torch.cat([mask1.mask2], 0)
             hint = torch.cat((real_vim * mask, mask), 1)
 
             fake = netG(Variable(real_sim), Variable(hint))
