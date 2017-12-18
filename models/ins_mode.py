@@ -61,7 +61,7 @@ class DilateTunnel(nn.Module):
         return self.tunnel(x)
 
 
-Inorm = functools.partial(nn.InstanceNorm2d, affine=False)
+Inorm = functools.partial(nn.BatchNorm2d, affine=True)
 
 
 class def_netG(nn.Module):

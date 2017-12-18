@@ -201,7 +201,7 @@ class def_netD(nn.Module):
 
 
 def def_netF():
-    vgg16 = M.vgg16()
+    vgg16 = M.vgg16_bn()
     vgg16.load_state_dict(torch.load('vgg16_bn-6c64b313.pth'))
     vgg16.features = nn.Sequential(
         *list(vgg16.features.children())[:13]
