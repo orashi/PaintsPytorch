@@ -10,7 +10,7 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
 from models.ins_mode import *
-from data.proData import CreateDataLoader
+from data.greyData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--datarootC', required=True, help='path to colored dataset')
