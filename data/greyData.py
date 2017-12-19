@@ -98,8 +98,7 @@ def make_dataset(Cdir, Sdir):
     for _, __, fnames in sorted(os.walk(Sdir)):
         for fname in fnames:
             if is_image_file(fname):
-                images.append((os.path.join(Cdir, fname), os.path.join(Sdir, fname),
-                               os.path.join(Sdir + '4', fname), os.path.join(Sdir + '3', fname)))
+                images.append((os.path.join(Cdir, fname), os.path.join(Sdir, fname)))
     return images
 
 
@@ -122,7 +121,7 @@ class ImageFolder(data.Dataset):
         self.stransform = stransform
 
     def __getitem__(self, index):
-        Cpath, Spath = self.imgs[index][0], self.imgs[index][random.randint(1, 3)]
+        Cpath, Spath = self.imgs[index][0], self.imgs[index][1]
         Cimg, Simg = color_loader(Cpath), grey_loader(Spath)
         Cimg, Simg = RandomCrop(511)(Cimg, Simg)
         if random.random() < 0.5:
