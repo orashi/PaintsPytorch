@@ -10,7 +10,7 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
 from models.pro_model import *
-from data.greyData import CreateDataLoader
+from data.proData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--datarootC', required=True, help='path to colored dataset')
@@ -200,16 +200,16 @@ for epoch in range(opt.niter):
             # additional penalty term to keep the scores from drifting too far from zero
             errD_realer.backward(one, retain_graph=True)  # backward on score on real
 
-            # gradient penalty  temporarily failed
-            # gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, real_sim)
-            # gradient_penalty.backward()
+            gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, real_sim)
+            gradient_penalty.backward()
 
-            dist = L2_dist(Variable(real_cim).view(opt.batchSize, -1),
-                           Variable(fake_cim).view(opt.batchSize, -1)).mean()
-            lip_est = (errD_real - errD_fake).abs() / (dist + 1e-8)
-            lip_loss = opt.gpW * ((1.0 - lip_est) ** 2).mean(0).view(1)
-            lip_loss.backward(one)
-            gradient_penalty = lip_loss
+            #
+            # dist = L2_dist(Variable(real_cim).view(opt.batchSize, -1),
+            #                Variable(fake_cim).view(opt.batchSize, -1)).mean()
+            # lip_est = (errD_real - errD_fake).abs() / (dist + 1e-8)
+            # lip_loss = opt.gpW * ((1.0 - lip_est) ** 2).mean(0).view(1)
+            # lip_loss.backward(one)
+            # gradient_penalty = lip_loss
             # above is approximation 
 
             optimizerD.step()
