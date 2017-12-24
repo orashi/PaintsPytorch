@@ -316,7 +316,7 @@ for epoch in range(opt.niter):
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
-            writer.add_scalar('D MSE Loss', contentLoss.data[0], gen_iterations)
+            writer.add_scalar('D MSE Loss', DMSELoss.data[0], gen_iterations)
             writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
             writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
             writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
