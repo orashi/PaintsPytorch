@@ -42,6 +42,7 @@ parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drif
 parser.add_argument('--mseW', type=float, default=0.01, help='MSE loss weight')
 parser.add_argument('--MSE', action='store_true', help='enables pure MSE')
 parser.add_argument('--feat', action='store_true', help='enables feat test')
+parser.add_argument('--cp', action='store_true', help='enables comp train')
 
 opt = parser.parse_args()
 print(opt)
