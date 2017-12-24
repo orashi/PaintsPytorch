@@ -155,7 +155,7 @@ class def_netD(nn.Module):
         super(def_netD, self).__init__()
 
         sequence = [
-            nn.Conv2d(4, ndf, kernel_size=7, stride=1, padding=1, bias=False),  # 512
+            nn.Conv2d(4, ndf, kernel_size=7, stride=1, padding=3, bias=False),  # 512
             nn.LeakyReLU(0.2, True),
             nn.Conv2d(ndf, ndf, kernel_size=4, stride=2, padding=1, bias=False),  # 256
             nn.LeakyReLU(0.2, True),
