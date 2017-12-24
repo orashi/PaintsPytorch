@@ -15,7 +15,7 @@ class ResNeXtBottleneck(nn.Module):
         super(ResNeXtBottleneck, self).__init__()
         D = out_channels // 2
         self.conv_reduce = nn.Conv2d(in_channels, D, kernel_size=1, stride=1, padding=0, bias=False)
-        self.conv_conv = nn.Conv2d(D, D, kernel_size=3, stride=stride, padding=dilate, dilation=dilate,
+        self.conv_conv = nn.Conv2d(D, D, kernel_size=2 + stride, stride=stride, padding=dilate, dilation=dilate,
                                    groups=cardinality,
                                    bias=False)
         self.conv_expand = nn.Conv2d(D, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
