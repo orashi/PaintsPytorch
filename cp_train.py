@@ -218,9 +218,9 @@ for epoch in range(opt.niter):
         ############################
         # (2) Update G network
         ############################
-        if i < len(dataloader) - 16:
+        if i < len(dataloader) - 16 / opt.batchSize:
             if flag:  # fix samples
-                data = zip(*[data_iter.next() for _ in range(16)])
+                data = zip(*[data_iter.next() for _ in range(16/ opt.batchSize)])
                 real_cim, real_vim, real_sim = [torch.cat(dat, 0) for dat in data]
                 i += 1
 
@@ -228,7 +228,7 @@ for epoch in range(opt.niter):
                     real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
                 mask = torch.cat(
-                    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize * 16)],
+                    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(16)],
                     0).cuda()
                 hint = torch.cat((real_vim * mask, mask), 1)
 
