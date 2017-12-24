@@ -218,9 +218,9 @@ for epoch in range(opt.niter):
         ############################
         # (2) Update G network
         ############################
-        if i < len(dataloader) - 16 / opt.batchSize:
+        if i < len(dataloader) - 16 // opt.batchSize:
             if flag:  # fix samples
-                data = zip(*[data_iter.next() for _ in range(16/ opt.batchSize)])
+                data = zip(*[data_iter.next() for _ in range(16 // opt.batchSize)])
                 real_cim, real_vim, real_sim = [torch.cat(dat, 0) for dat in data]
                 i += 1
 
