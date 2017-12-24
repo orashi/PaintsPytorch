@@ -218,9 +218,9 @@ for epoch in range(opt.niter):
         ############################
         # (2) Update G network
         ############################
-        if i < len(dataloader) - 4:
+        if i < len(dataloader) - 16:
             if flag:  # fix samples
-                data = zip(*[data_iter.next() for _ in range(4)])
+                data = zip(*[data_iter.next() for _ in range(16)])
                 real_cim, real_vim, real_sim = [torch.cat(dat, 0) for dat in data]
                 i += 1
 
@@ -228,7 +228,7 @@ for epoch in range(opt.niter):
                     real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
                 mask = torch.cat(
-                    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize * 4)],
+                    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize * 16)],
                     0).cuda()
                 hint = torch.cat((real_vim * mask, mask), 1)
 
@@ -291,9 +291,9 @@ for epoch in range(opt.niter):
                 MSELoss = criterion_MSE(fake, Variable(real_cim))
 
                 contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                            netF(Variable((real_cim.mul(0.5) - saber) / diver))) + \
-                              criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
-                errg = contentLoss + MSELoss * opt.mseW
+                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
+                DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
+                errg = contentLoss + DMSELoss
                 errg.backward()
             else:
                 errG = netD(fake, Variable(real_sim))[0].mean(0).view(1) * opt.advW
@@ -312,12 +312,11 @@ for epoch in range(opt.niter):
         ############################
         if gen_iterations < opt.baseGeni:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
-            writer.add_scalar('MSE Loss', MSELoss.data[0], gen_iterations)
             print('[%d/%d][%d/%d][%d] content %f '
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
-            writer.add_scalar('MSE Loss', MSELoss.data[0], gen_iterations)
+            writer.add_scalar('D MSE Loss', contentLoss.data[0], gen_iterations)
             writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
             writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
             writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
