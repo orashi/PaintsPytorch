@@ -189,8 +189,8 @@ for epoch in range(opt.niter):
             hint = torch.cat((real_vim * mask, mask), 1)
 
             # train with fake
-
-            fake_cim = netG(Variable(real_sim, volatile=True), Variable(hint, volatile=True)).data
+            with torch.no_grad():
+                fake_cim = netG(Variable(real_sim), Variable(hint)).data
             errD_fake = netD(Variable(fake_cim), Variable(real_sim))[0].mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
@@ -327,7 +327,8 @@ for epoch in range(opt.niter):
                      errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
 
         if gen_iterations % 500 == 0:
-            fake = netG(Variable(fixed_sketch, volatile=True), Variable(fixed_hint, volatile=True))
+            with torch.no_grad():
+                fake = netG(Variable(fixed_sketch), Variable(fixed_hint))
             writer.add_image('deblur imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),
                              gen_iterations)
 
