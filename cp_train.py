@@ -43,6 +43,7 @@ parser.add_argument('--mseW', type=float, default=0.01, help='MSE loss weight')
 parser.add_argument('--MSE', action='store_true', help='enables pure MSE')
 parser.add_argument('--feat', action='store_true', help='enables feat test')
 parser.add_argument('--cp', action='store_true', help='enables comp train')
+parser.add_argument('--cp2', action='store_true', help='enables comp train')
 
 opt = parser.parse_args()
 print(opt)
@@ -294,6 +295,14 @@ for epoch in range(opt.niter):
                                             netF(Variable((real_cim.mul(0.5) - saber) / diver)))
                 DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
                 errg = contentLoss + DMSELoss
+                errg.backward()
+            elif opt.cp2:
+                errd, feat = netD(fake, Variable(real_sim))
+                errG = errd.mean(0).view(1) * opt.advW
+                errG.backward(mone, retain_graph=True)
+                DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
+                contentLoss = DMSELoss
+                errg = DMSELoss
                 errg.backward()
             else:
                 errG = netD(fake, Variable(real_sim))[0].mean(0).view(1) * opt.advW
