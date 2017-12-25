@@ -30,6 +30,7 @@ parser.add_argument('--netG', default='', help="path to netG (to continue traini
 parser.add_argument('--netD', default='', help="path to netD (to continue training)")
 parser.add_argument('--optim', action='store_true', help='load optimizer\'s checkpoint')
 parser.add_argument('--outf', default='.', help='folder to output images and model checkpoints')
+parser.add_argument('--optf', default='.', help='folder to optimizer checkpoints')
 parser.add_argument('--Diters', type=int, default=1, help='number of D iters per each G iter')
 parser.add_argument('--manualSeed', type=int, default=2345, help='random seed to use. Default=1234')
 parser.add_argument('--baseGeni', type=int, default=2500, help='start base of pure pair L1 loss')
@@ -111,8 +112,8 @@ optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.9))
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 
 if opt.optim:
-    optimizerG.load_state_dict(torch.load('%s/optimG_checkpoint.pth' % opt.outf))
-    optimizerD.load_state_dict(torch.load('%s/optimD_checkpoint.pth' % opt.outf))
+    optimizerG.load_state_dict(torch.load('%s/optimG_checkpoint.pth' % opt.optf))
+    optimizerD.load_state_dict(torch.load('%s/optimD_checkpoint.pth' % opt.optf))
 
 
 # schedulerG = lr_scheduler.ReduceLROnPlateau(optimizerG, mode='max', verbose=True, min_lr=0.0000005,
@@ -301,7 +302,7 @@ for epoch in range(opt.niter):
                 errG = errd.mean(0).view(1) * opt.advW
                 errG.backward(mone, retain_graph=True)
                 DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
-                contentLoss = DMSELoss
+                contentLoss = DMSELoss * 1e3
                 errg = DMSELoss
                 errg.backward()
             else:
