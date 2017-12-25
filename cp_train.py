@@ -301,9 +301,10 @@ for epoch in range(opt.niter):
                 errd, feat = netD(fake, Variable(real_sim))
                 errG = errd.mean(0).view(1) * opt.advW
                 errG.backward(mone, retain_graph=True)
+                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
+                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
                 DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
-                contentLoss = DMSELoss * 1e3
-                errg = DMSELoss
+                errg = contentLoss + DMSELoss * 1e3
                 errg.backward()
             else:
                 errG = netD(fake, Variable(real_sim))[0].mean(0).view(1) * opt.advW
