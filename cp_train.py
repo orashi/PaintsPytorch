@@ -157,7 +157,7 @@ X = stats.truncnorm(
 for epoch in range(opt.niter):
     data_iter = iter(dataloader)
     i = 0
-    while i < len(dataloader) - 4:
+    while i < len(dataloader) - 16 // opt.batchSize:
         ############################
         # (1) Update D network
         ###########################
@@ -173,7 +173,7 @@ for epoch in range(opt.niter):
             Diters = 0
 
         j = 0
-        while j < Diters and i < len(dataloader) - 4:
+        while j < Diters and i < len(dataloader) - 16 // opt.batchSize:
 
             j += 1
             netD.zero_grad()
