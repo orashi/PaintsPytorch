@@ -46,6 +46,7 @@ parser.add_argument('--feat', action='store_true', help='enables feat test')
 parser.add_argument('--cp', action='store_true', help='enables comp train')
 parser.add_argument('--cp2', action='store_true', help='enables comp train')
 parser.add_argument('--cp3', action='store_true', help='enables comp train')
+parser.add_argument('--cp4', action='store_true', help='enables comp train')
 
 opt = parser.parse_args()
 print(opt)
