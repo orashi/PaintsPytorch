@@ -9,7 +9,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
-from models.cp_model import *
+from models.pack_model import *
 from data.proData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
@@ -305,6 +305,14 @@ for epoch in range(opt.niter):
                                             netF(Variable((real_cim.mul(0.5) - saber) / diver)))
                 DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
                 errg = contentLoss + DMSELoss * 1e3
+                errg.backward()
+            elif opt.cp3:
+                errd, feat = netD(fake, Variable(real_sim))
+                errG = errd.mean(0).view(1) * opt.advW
+                errG.backward(mone, retain_graph=True)
+                DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
+                errg = DMSELoss * 1e3
+                contentLoss = DMSELoss * 1e3
                 errg.backward()
             else:
                 errG = netD(fake, Variable(real_sim))[0].mean(0).view(1) * opt.advW
