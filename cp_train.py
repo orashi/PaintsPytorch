@@ -9,7 +9,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
-from models.pack_model import *
+from models.cp_model import *
 from data.proData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
@@ -45,6 +45,7 @@ parser.add_argument('--MSE', action='store_true', help='enables pure MSE')
 parser.add_argument('--feat', action='store_true', help='enables feat test')
 parser.add_argument('--cp', action='store_true', help='enables comp train')
 parser.add_argument('--cp2', action='store_true', help='enables comp train')
+parser.add_argument('--cp3', action='store_true', help='enables comp train')
 
 opt = parser.parse_args()
 print(opt)
@@ -313,6 +314,15 @@ for epoch in range(opt.niter):
                 DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
                 errg = DMSELoss * 1e3
                 contentLoss = DMSELoss * 1e3
+                errg.backward()
+            elif opt.cp4:
+                errd, feat = netD(fake, Variable(real_sim))
+                errG = errd.mean(0).view(1) * opt.advW
+                errG.backward(mone, retain_graph=True)
+                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
+                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
+                DMSELoss = contentLoss
+                errg = contentLoss
                 errg.backward()
             else:
                 errG = netD(fake, Variable(real_sim))[0].mean(0).view(1) * opt.advW
