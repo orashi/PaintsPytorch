@@ -123,7 +123,8 @@ if opt.optim:
 # schedulerD = lr_scheduler.ReduceLROnPlateau(optimizerD, mode='max', verbose=True, min_lr=0.0000005,
 #                                             patience=8)  # 1.5*10^5 iter
 
-
+schedulerG = lr_scheduler.StepLR(optimizerG, step_size=100000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
+schedulerD = lr_scheduler.StepLR(optimizerG, step_size=100000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
 # schedulerG = lr_scheduler.MultiStepLR(optimizerG, milestones=[60, 120], gamma=0.1)  # 1.5*10^5 iter
 # schedulerD = lr_scheduler.MultiStepLR(optimizerD, milestones=[60, 120], gamma=0.1)
 
@@ -370,6 +371,8 @@ for epoch in range(opt.niter):
         #     vutils.save_image(fake.data.mul(0.5).add(0.5),
         #                       '%s/fake_samples_gen_iter_%08d.png' % (opt.outf, gen_iterations))
         gen_iterations += 1
+        schedulerG.step()
+        schedulerD.step()
 
     # do checkpointing
     if opt.cut == 0:
