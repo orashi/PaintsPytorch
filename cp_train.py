@@ -285,10 +285,9 @@ for epoch in range(opt.niter):
             elif gen_iterations < opt.baseGeni:
                 contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
                                             netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                MSELoss = criterion_MSE(fake, Variable(real_cim))
-
-                errG = contentLoss + MSELoss * opt.mseW
-                errG.backward()
+                DMSELoss = contentLoss
+                errg = contentLoss
+                errg.backward()
             elif opt.cp:
                 errd, feat = netD(fake, Variable(real_sim))
                 errG = errd.mean(0).view(1) * opt.advW
