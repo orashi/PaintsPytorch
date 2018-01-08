@@ -9,7 +9,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
-from models.cp_model2 import *
+from models.cp_model import *
 from data.proData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
@@ -122,8 +122,8 @@ if opt.optim:
 # schedulerD = lr_scheduler.ReduceLROnPlateau(optimizerD, mode='max', verbose=True, min_lr=0.0000005,
 #                                             patience=8)  # 1.5*10^5 iter
 
-schedulerG = lr_scheduler.StepLR(optimizerG, step_size=100000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
-schedulerD = lr_scheduler.StepLR(optimizerG, step_size=100000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
+schedulerG = lr_scheduler.StepLR(optimizerG, step_size=150000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
+schedulerD = lr_scheduler.StepLR(optimizerG, step_size=150000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
 
 
 # schedulerG = lr_scheduler.MultiStepLR(optimizerG, milestones=[60, 120], gamma=0.1)  # 1.5*10^5 iter
