@@ -117,7 +117,6 @@ if opt.optim:
     optimizerG.load_state_dict(torch.load('%s/optimG_checkpoint.pth' % opt.optf))
     optimizerD.load_state_dict(torch.load('%s/optimD_checkpoint.pth' % opt.optf))
 
-
 # schedulerG = lr_scheduler.ReduceLROnPlateau(optimizerG, mode='max', verbose=True, min_lr=0.0000005,
 #                                             patience=8)  # 1.5*10^5 iter
 # schedulerD = lr_scheduler.ReduceLROnPlateau(optimizerD, mode='max', verbose=True, min_lr=0.0000005,
@@ -125,6 +124,8 @@ if opt.optim:
 
 schedulerG = lr_scheduler.StepLR(optimizerG, step_size=100000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
 schedulerD = lr_scheduler.StepLR(optimizerG, step_size=100000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
+
+
 # schedulerG = lr_scheduler.MultiStepLR(optimizerG, milestones=[60, 120], gamma=0.1)  # 1.5*10^5 iter
 # schedulerD = lr_scheduler.MultiStepLR(optimizerD, milestones=[60, 120], gamma=0.1)
 
@@ -189,8 +190,13 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.cat([torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)],
-                             0).cuda()
+            mask1 = torch.cat(
+                [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize // 2)],
+                0).cuda()
+            mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
+                              0).cuda()
+            mask = torch.cat([mask1, mask2], 0)
+
             hint = torch.cat((real_vim * mask, mask), 1)
 
             # train with fake
@@ -232,9 +238,12 @@ for epoch in range(opt.niter):
                 if opt.cuda:
                     real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-                mask = torch.cat(
-                    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(16)],
+                mask1 = torch.cat(
+                    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(8)],
                     0).cuda()
+                mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(8)],
+                                  0).cuda()
+                mask = torch.cat([mask1, mask2], 0)
                 hint = torch.cat((real_vim * mask, mask), 1)
 
                 writer.add_image('target imgs', vutils.make_grid(real_cim.mul(0.5).add(0.5), nrow=4))
@@ -262,8 +271,13 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask = torch.cat([torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)],
-                             0).cuda()
+            mask1 = torch.cat(
+                [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize // 2)],
+                0).cuda()
+            mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
+                              0).cuda()
+            mask = torch.cat([mask1, mask2], 0)
+
             hint = torch.cat((real_vim * mask, mask), 1)
 
             fake = netG(Variable(real_sim), Variable(hint))
