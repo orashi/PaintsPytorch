@@ -97,17 +97,17 @@ saber = torch.FloatTensor([0.485 - 0.5, 0.456 - 0.5, 0.406 - 0.5]).view(1, 3, 1,
 diver = torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
 if opt.cuda:
-    netD.cuda()
-    netG.cuda()
-    netF.cuda()
+    netD = torch.nn.DataParallel(netD).cuda()
+    netG = torch.nn.DataParallel(netG).cuda()
+    netF = torch.nn.DataParallel(netF).cuda()
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
     saber, diver = saber.cuda(), diver.cuda()
-    criterion_L1.cuda()
-    criterion_MSE.cuda()
+    criterion_L1 = torch.nn.DataParallel(criterion_L1).cuda()
+    criterion_MSE = torch.nn.DataParallel(criterion_MSE).cuda()
     one, mone = one.cuda(), mone.cuda()
 
 if opt.feat:
-    netF2 = def_netF2().cuda()
+    netF2 = torch.nn.DataParallel(def_netF2()).cuda()
 
 # setup optimizer
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.9))
