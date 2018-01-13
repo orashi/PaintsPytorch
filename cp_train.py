@@ -102,8 +102,8 @@ if opt.cuda:
     netF = torch.nn.DataParallel(netF).cuda()
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
     saber, diver = saber.cuda(), diver.cuda()
-    criterion_L1 = torch.nn.DataParallel(criterion_L1).cuda()
-    criterion_MSE = torch.nn.DataParallel(criterion_MSE).cuda()
+    criterion_L1 = criterion_L1.cuda()
+    criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
 
 if opt.feat:
