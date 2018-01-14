@@ -138,7 +138,7 @@ if opt.optim:
 
 
 def calc_gradient_penalty(netD, real_data, fake_data, sketch):
-    alpha = torch.rand(opt.batchSize, 1, 1, 1)
+    alpha = torch.rand(opt.batchSize // 2, 1, 1, 1)
     alpha = alpha.cuda() if opt.cuda else alpha
 
     interpolates = alpha * real_data + ((1 - alpha) * fake_data)
