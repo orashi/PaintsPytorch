@@ -199,7 +199,7 @@ class def_netD(nn.Module):
     def forward(self, color, sketch):
         feat = self.feat(torch.cat([color, sketch], 1))
         out = self.post(feat)
-        return self.out(out.view(color.size(0), -1)), feat
+        return self.out(out.view(color.size(0), -1))
 
 
 def def_netF():
