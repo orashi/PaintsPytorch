@@ -102,6 +102,7 @@ diver = torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
 if opt.cuda:
     netD = torch.nn.DataParallel(netD).cuda()
+    netD2 = torch.nn.DataParallel(netD2).cuda()
     netG = torch.nn.DataParallel(netG).cuda()
     netF = torch.nn.DataParallel(netF).cuda()
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
