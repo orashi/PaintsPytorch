@@ -331,7 +331,7 @@ for epoch in range(opt.niter):
                 contentLoss = DMSELoss * 1e3
                 errg.backward()
             elif opt.cp4:
-                errd, feat = netD(fake, Variable(real_sim))
+                errd = netD(fake, Variable(real_sim))
                 errG = errd.mean(0).view(1) * opt.advW
                 errG.backward(mone, retain_graph=True)
                 contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
