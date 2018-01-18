@@ -40,6 +40,7 @@ parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight, default=0.01')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
+parser.add_argument('--gamma', type=float, default=1, help='wasserstein drift weight')
 parser.add_argument('--mseW', type=float, default=0.01, help='MSE loss weight')
 parser.add_argument('--MSE', action='store_true', help='enables pure MSE')
 parser.add_argument('--feat', action='store_true', help='enables feat test')
@@ -147,7 +148,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch):
                          disc_interpolates.size()),
                      create_graph=True, retain_graph=True, only_inputs=True)[0]
 
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * opt.gpW
+    gradient_penalty = ((gradients.norm(2, dim=1) - opt.gamma) ** 2).mean() * opt.gpW
     return gradient_penalty
 
 
