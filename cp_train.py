@@ -73,17 +73,17 @@ writer = SummaryWriter(log_dir=opt.env, comment='this is great')
 
 dataloader = CreateDataLoader(opt)
 
-netG = def_netG(ngf=opt.ngf)
+netG = torch.nn.DataParallel(def_netG(ngf=opt.ngf))
 if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
 print(netG)
 
-netD = def_netD(ndf=opt.ndf)
+netD = torch.nn.DataParallel(def_netD(ndf=opt.ndf))
 if opt.netD != '':
     netD.load_state_dict(torch.load(opt.netD))
 print(netD)
 
-netF = def_netF()
+netF = torch.nn.DataParallel(def_netF())
 print(netD)
 
 criterion_L1 = nn.L1Loss()
@@ -98,9 +98,9 @@ saber = torch.FloatTensor([0.485 - 0.5, 0.456 - 0.5, 0.406 - 0.5]).view(1, 3, 1,
 diver = torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
 if opt.cuda:
-    netD = torch.nn.DataParallel(netD).cuda()
-    netG = torch.nn.DataParallel(netG).cuda()
-    netF = torch.nn.DataParallel(netF).cuda()
+    netD = netD.cuda()
+    netG = netG.cuda()
+    netF = netF.cuda()
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
     saber, diver = saber.cuda(), diver.cuda()
     criterion_L1 = criterion_L1.cuda()
