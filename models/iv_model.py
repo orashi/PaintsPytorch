@@ -159,7 +159,7 @@ class def_netD(nn.Module):
 
         sequence = [
 
-            nn.Conv2d(ndf * 16, ndf * 8, kernel_size=3, stride=1, padding=0, bias=False),  # 32
+            nn.Conv2d(ndf * 16, ndf * 8, kernel_size=3, stride=1, padding=1, bias=False),  # 32
             nn.LeakyReLU(0.2, True),
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
             ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 16
