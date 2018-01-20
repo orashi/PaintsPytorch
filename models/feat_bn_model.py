@@ -209,5 +209,3 @@ def def_netF():
     for param in vgg16.parameters():
         param.requires_grad = False
     return vgg16.features
-
-

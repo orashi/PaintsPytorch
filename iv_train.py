@@ -9,7 +9,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable, grad
-from models.cp_model import *
+from models.iv_model import *
 from data.proData import CreateDataLoader
 
 parser = argparse.ArgumentParser()
@@ -41,13 +41,6 @@ parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein drift weight')
-parser.add_argument('--mseW', type=float, default=0.01, help='MSE loss weight')
-parser.add_argument('--MSE', action='store_true', help='enables pure MSE')
-parser.add_argument('--feat', action='store_true', help='enables feat test')
-parser.add_argument('--cp', action='store_true', help='enables comp train')
-parser.add_argument('--cp2', action='store_true', help='enables comp train')
-parser.add_argument('--cp3', action='store_true', help='enables comp train')
-parser.add_argument('--cp4', action='store_true', help='enables comp train')
 
 opt = parser.parse_args()
 print(opt)
@@ -84,7 +77,12 @@ if opt.netD != '':
 print(netD)
 
 netF = torch.nn.DataParallel(def_netF())
-print(netD)
+print(netF)
+for param in netF.parameters():
+    param.requires_grad = False
+
+netI = torch.nn.DataParallel(def_netI())
+print(netI)
 
 criterion_L1 = nn.L1Loss()
 criterion_MSE = nn.MSELoss()
@@ -94,21 +92,16 @@ mone = one * -1
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
-saber = torch.FloatTensor([0.485 - 0.5, 0.456 - 0.5, 0.406 - 0.5]).view(1, 3, 1, 1)
-diver = torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
 if opt.cuda:
     netD = netD.cuda()
     netG = netG.cuda()
     netF = netF.cuda()
+    netI = netI.cuda().eval()
     fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
-    saber, diver = saber.cuda(), diver.cuda()
     criterion_L1 = criterion_L1.cuda()
     criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
-
-if opt.feat:
-    netF2 = torch.nn.DataParallel(def_netF2()).cuda()
 
 # setup optimizer
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.9))
@@ -117,19 +110,6 @@ optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 if opt.optim:
     optimizerG.load_state_dict(torch.load('%s/optimG_checkpoint.pth' % opt.optf))
     optimizerD.load_state_dict(torch.load('%s/optimD_checkpoint.pth' % opt.optf))
-
-# schedulerG = lr_scheduler.ReduceLROnPlateau(optimizerG, mode='max', verbose=True, min_lr=0.0000005,
-#                                             patience=8)  # 1.5*10^5 iter
-# schedulerD = lr_scheduler.ReduceLROnPlateau(optimizerD, mode='max', verbose=True, min_lr=0.0000005,
-#                                             patience=8)  # 1.5*10^5 iter
-
-# schedulerG = lr_scheduler.StepLR(optimizerG, step_size=150000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
-# schedulerD = lr_scheduler.StepLR(optimizerG, step_size=150000, gamma=0.1, last_epoch=-1)  # 1.5*10^5 iter
-
-
-# schedulerG = lr_scheduler.MultiStepLR(optimizerG, milestones=[60, 120], gamma=0.1)  # 1.5*10^5 iter
-# schedulerD = lr_scheduler.MultiStepLR(optimizerD, milestones=[60, 120], gamma=0.1)
-
 
 def calc_gradient_penalty(netD, real_data, fake_data, sketch):
     alpha = torch.rand(opt.batchSize, 1, 1, 1)
@@ -197,23 +177,23 @@ for epoch in range(opt.niter):
             mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
                               0).cuda()
             mask = torch.cat([mask1, mask2], 0)
-
             hint = torch.cat((real_vim * mask, mask), 1)
 
+            feat_sim = netI(Variable(real_sim)).data
             # train with fake
             with torch.no_grad():
-                fake_cim = netG(Variable(real_sim), Variable(hint)).data
-            errD_fake = netD(Variable(fake_cim), Variable(real_sim))[0].mean(0).view(1)
+                fake_cim = netG(Variable(real_sim), Variable(hint), Variable(feat_sim)).data
+            errD_fake = netD(Variable(fake_cim), Variable(feat_sim))[0].mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_real = netD(Variable(real_cim), Variable(real_sim))[0].mean(0).view(1)
+            errD_real = netD(Variable(real_cim), Variable(feat_sim))[0].mean(0).view(1)
             errD = errD_real - errD_fake
 
             errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift
             # additional penalty term to keep the scores from drifting too far from zero
             errD_realer.backward(one, retain_graph=True)  # backward on score on real
 
-            gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, real_sim)
+            gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, feat_sim)
             gradient_penalty.backward()
 
             optimizerD.step()
@@ -269,76 +249,24 @@ for epoch in range(opt.niter):
             mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
                               0).cuda()
             mask = torch.cat([mask1, mask2], 0)
-
             hint = torch.cat((real_vim * mask, mask), 1)
 
-            fake = netG(Variable(real_sim), Variable(hint))
+            feat_sim = netI(Variable(real_sim)).data
 
-            if opt.MSE:
-                MSELoss = criterion_MSE(fake, Variable(real_cim))
+            fake = netG(Variable(real_sim), Variable(hint), Variable(feat_sim))
 
-                errG = MSELoss
-                errG.backward()
-                contentLoss = MSELoss
-            elif opt.feat:
-                contentLoss = criterion_MSE(netF2((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                            netF2(Variable((real_cim.mul(0.5) - saber) / diver)))
-                MSELoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                        netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-
-                errG = (contentLoss + MSELoss) * 0.5
-                errG.backward()
-            elif gen_iterations < opt.baseGeni:
-                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                DMSELoss = contentLoss
-                errg = contentLoss
-                errg.backward()
-            elif opt.cp:
-                errd, feat = netD(fake, Variable(real_sim))
-                errG = errd.mean(0).view(1) * opt.advW
-                errG.backward(mone, retain_graph=True)
-                MSELoss = criterion_MSE(fake, Variable(real_cim))
-
-                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
-                errg = contentLoss + DMSELoss
-                errg.backward()
-            elif opt.cp2:
-                errd, feat = netD(fake, Variable(real_sim))
-                errG = errd.mean(0).view(1) * opt.advW
-                errG.backward(mone, retain_graph=True)
-                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
-                errg = contentLoss + DMSELoss * 1e3
-                errg.backward()
-            elif opt.cp3:
-                errd, feat = netD(fake, Variable(real_sim))
-                errG = errd.mean(0).view(1) * opt.advW
-                errG.backward(mone, retain_graph=True)
-                DMSELoss = criterion_MSE(feat, netD.feat(Variable(torch.cat([real_cim, real_sim], 1))).detach())
-                errg = DMSELoss * 1e3
-                contentLoss = DMSELoss * 1e3
-                errg.backward()
-            elif opt.cp4:
-                errd = netD(fake, Variable(real_sim))
-                errG = errd.mean(0).view(1) * opt.advW
-                errG.backward(mone, retain_graph=True)
-                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
+            if gen_iterations < opt.baseGeni:
+                contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
                 DMSELoss = contentLoss
                 errg = contentLoss
                 errg.backward()
             else:
-                errG = netD(fake, Variable(real_sim))[0].mean(0).view(1) * opt.advW
+                errd = netD(fake, Variable(feat_sim))
+                errG = errd.mean(0).view(1) * opt.advW
                 errG.backward(mone, retain_graph=True)
-
-                contentLoss = criterion_MSE(netF((fake.mul(0.5) - Variable(saber)) / Variable(diver)),
-                                            netF(Variable((real_cim.mul(0.5) - saber) / diver)))
-                MSELoss = criterion_MSE(fake, Variable(real_cim))
-                errg = contentLoss + MSELoss * opt.mseW
+                contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
+                DMSELoss = contentLoss
+                errg = contentLoss
                 errg.backward()
 
             optimizerG.step()
@@ -369,8 +297,6 @@ for epoch in range(opt.niter):
                              gen_iterations)
 
         gen_iterations += 1
-        # schedulerG.step()
-        # schedulerD.step()
 
     # do checkpointing
     if opt.cut == 0:
