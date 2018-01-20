@@ -196,7 +196,7 @@ class def_netF(nn.Module):
         self.std = Variable(torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)).cuda()
 
     def forward(self, images):
-        return self.model((images.mul(0.5) - self.mean) / Variable(self.std))
+        return self.model((images.mul(0.5) - self.mean) / self.std)
 
 
 class def_netI(nn.Module):
