@@ -92,13 +92,14 @@ mone = one * -1
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
+fixed_sketch_feat = torch.FloatTensor()
 
 if opt.cuda:
     netD = netD.cuda()
     netG = netG.cuda()
     netF = netF.cuda()
     netI = netI.cuda().eval()
-    fixed_sketch, fixed_hint = fixed_sketch.cuda(), fixed_hint.cuda()
+    fixed_sketch, fixed_hint, fixed_sketch_feat = fixed_sketch.cuda(), fixed_hint.cuda(), fixed_sketch_feat.cuda()
     criterion_L1 = criterion_L1.cuda()
     criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
@@ -110,6 +111,7 @@ optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 if opt.optim:
     optimizerG.load_state_dict(torch.load('%s/optimG_checkpoint.pth' % opt.optf))
     optimizerD.load_state_dict(torch.load('%s/optimD_checkpoint.pth' % opt.optf))
+
 
 def calc_gradient_penalty(netD, real_data, fake_data, sketch):
     alpha = torch.rand(opt.batchSize, 1, 1, 1)
@@ -218,6 +220,8 @@ for epoch in range(opt.niter):
                 mask = torch.cat([mask1, mask2], 0)
                 hint = torch.cat((real_vim * mask, mask), 1)
 
+                feat_sim = netI(Variable(real_sim)).data
+
                 writer.add_image('target imgs', vutils.make_grid(real_cim.mul(0.5).add(0.5), nrow=4))
                 writer.add_image('sketch imgs', vutils.make_grid(real_sim.mul(0.5).add(0.5), nrow=4))
                 writer.add_image('hint', vutils.make_grid((real_vim * mask).mul(0.5).add(0.5), nrow=4))
@@ -227,6 +231,7 @@ for epoch in range(opt.niter):
                                   '%s/blur_samples' % opt.outf + '.png')
                 fixed_sketch.resize_as_(real_sim).copy_(real_sim)
                 fixed_hint.resize_as_(hint).copy_(hint)
+                fixed_sketch_feat.resize_as_(feat_sim).copy_(feat_sim)
 
                 flag -= 1
 
@@ -292,8 +297,8 @@ for epoch in range(opt.niter):
 
         if gen_iterations % 500 == 0:
             with torch.no_grad():
-                fake = netG(Variable(fixed_sketch), Variable(fixed_hint))
-            writer.add_image('deblur imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),
+                fake = netG(Variable(fixed_sketch), Variable(fixed_hint), Variable(fixed_sketch_feat))
+            writer.add_image('colored imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),
                              gen_iterations)
 
         gen_iterations += 1
