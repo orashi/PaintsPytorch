@@ -38,34 +38,6 @@ class ResNeXtBottleneck(nn.Module):
         return x[:, :self.out_channels] + bottleneck
 
 
-# calculate std deviation for each feature in each location
-# scalar = average over all feature & locations
-# broadcast to constant feature map
-class MinibatchStddev(nn.Module):
-    """Layer for GAN Discriminator used in PGGAN.
-        It penalizes when images in the minibatch look similar.
-        For example, G generates fall into mode collapse and generate similar images,
-        then stddev of the minibatch is small. D looks at the small stddev and thinks this is likely fake.
-        This layer calculates stddev and provide it as additional channel.
-    """
-
-    def __init__(self):
-        super(MinibatchStddev).__init__()
-
-    def forward(self, x):
-        """
-        Args:
-            x (N, C, H, W)
-        Returns:
-            (N, C+1, H, W): The last channel dimension is stddev.
-        """
-
-        std = ((x - x.mean(dim=0, keepdim=True)).pow(2).mean(dim=0, keepdim=True) + 1e-8).sqrt().mean()
-        scalar = std.expand(x.size(0), 1, x.size(2), x.size(3))  # [N,1,H,W]
-        x = torch.cat([x, scalar], dim=1)
-        return x
-
-
 class def_netG(nn.Module):
     def __init__(self, ngf=64):
         super(def_netG, self).__init__()

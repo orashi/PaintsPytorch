@@ -106,28 +106,28 @@ if opt.cuda:
 
 # setup optimizer
 if opt.stage == 2:
-    ignored_params = list(map(id, netG.up2.parameters())) + \
-                     list(map(id, netG.tunnel1.parameters())) + \
-                     list(map(id, netG.exit1.parameters())) + \
-                     list(map(id, netG.up1.parameters())) + \
-                     list(map(id, netG.exit0.parameters()))
+    ignored_params = list(map(id, netG.module.up2.parameters())) + \
+                     list(map(id, netG.module.tunnel1.parameters())) + \
+                     list(map(id, netG.module.exit1.parameters())) + \
+                     list(map(id, netG.module.up1.parameters())) + \
+                     list(map(id, netG.module.exit0.parameters()))
 
     base_params = filter(lambda p: id(p) not in ignored_params,
                          netG.parameters())
     real_cim_pooler = lambda x: F.avg_pool2d(x, 4, 4)
 
 elif opt.stage == 1:
-    ignored_params = list(map(id, netG.exit2.parameters())) + \
-                     list(map(id, netG.up1.parameters())) + \
-                     list(map(id, netG.exit0.parameters()))
+    ignored_params = list(map(id, netG.module.exit2.parameters())) + \
+                     list(map(id, netG.module.up1.parameters())) + \
+                     list(map(id, netG.module.exit0.parameters()))
 
     base_params = filter(lambda p: id(p) not in ignored_params,
                          netG.parameters())
     real_cim_pooler = lambda x: F.avg_pool2d(x, 2, 2)
 
 else:
-    ignored_params = list(map(id, netG.exit2.parameters())) + \
-                     list(map(id, netG.exit1.parameters()))
+    ignored_params = list(map(id, netG.module.exit2.parameters())) + \
+                     list(map(id, netG.module.exit1.parameters()))
 
     base_params = filter(lambda p: id(p) not in ignored_params,
                          netG.parameters())
