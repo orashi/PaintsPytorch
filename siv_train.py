@@ -40,7 +40,7 @@ parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight, default=0.01')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein drift weight')
-parser.add_argument('--stage', type=int, default=2, help='training stage')
+parser.add_argument('--stage', type=int, required=True, help='training stage')
 
 opt = parser.parse_args()
 print(opt)
