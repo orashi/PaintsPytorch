@@ -315,7 +315,7 @@ class def_netF(nn.Module):
         )
         self.model = vgg16.features
         self.register_buffer('mean',
-                             torch.FloatTensor([0.485 - 0.5, 0.456 - 0.5, 0.406 - 0.5])view(1, 3, 1, 1))
+                             torch.FloatTensor([0.485 - 0.5, 0.456 - 0.5, 0.406 - 0.5]).view(1, 3, 1, 1))
         self.register_buffer('std', torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 
     def forward(self, images):
