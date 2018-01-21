@@ -363,7 +363,7 @@ class def_netI(nn.Module):
         )
         self.model = i2v_model
         self.register_buffer('mean',
-                             torch.FloatTensor([164.76139251, 167.47864617, 181.13838569].view(1, 3, 1, 1)))
+                             torch.FloatTensor([164.76139251, 167.47864617, 181.13838569]).view(1, 3, 1, 1))
 
     def forward(self, images):
         images = F.avg_pool2d(images, 2, 2)
