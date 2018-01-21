@@ -40,6 +40,7 @@ parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight, default=0.01')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein drift weight')
+parser.add_argument('--stage', type=int, default=2, help='training stage')
 
 opt = parser.parse_args()
 print(opt)
@@ -70,7 +71,7 @@ if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
 print(netG)
 
-netD = torch.nn.DataParallel(def_netD(ndf=opt.ndf))
+netD = torch.nn.DataParallel(def_netD(ndf=opt.ndf, stage=opt.stage))
 if opt.netD != '':
     netD.load_state_dict(torch.load(opt.netD))
 print(netD)
@@ -104,7 +105,35 @@ if opt.cuda:
     one, mone = one.cuda(), mone.cuda()
 
 # setup optimizer
-optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.9))
+if opt.stage == 2:
+    ignored_params = list(map(id, netG.up2.parameters())) + \
+                     list(map(id, netG.tunnel1.parameters())) + \
+                     list(map(id, netG.exit1.parameters())) + \
+                     list(map(id, netG.up1.parameters())) + \
+                     list(map(id, netG.exit0.parameters()))
+
+    base_params = filter(lambda p: id(p) not in ignored_params,
+                         netG.parameters())
+    real_cim_pooler = lambda x: F.avg_pool2d(x, 4, 4)
+
+elif opt.stage == 1:
+    ignored_params = list(map(id, netG.exit2.parameters())) + \
+                     list(map(id, netG.up1.parameters())) + \
+                     list(map(id, netG.exit0.parameters()))
+
+    base_params = filter(lambda p: id(p) not in ignored_params,
+                         netG.parameters())
+    real_cim_pooler = lambda x: F.avg_pool2d(x, 2, 2)
+
+else:
+    ignored_params = list(map(id, netG.exit2.parameters())) + \
+                     list(map(id, netG.exit1.parameters()))
+
+    base_params = filter(lambda p: id(p) not in ignored_params,
+                         netG.parameters())
+    real_cim_pooler = lambda x: x
+
+optimizerG = optim.Adam(base_params, lr=opt.lrG, betas=(opt.beta1, 0.9))
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 
 if opt.optim:
@@ -181,9 +210,10 @@ for epoch in range(opt.niter):
             hint = torch.cat((real_vim * mask, mask), 1)
 
             feat_sim = netI(Variable(real_sim)).data
+            real_cim = real_cim_pooler(real_cim)
             # train with fake
             with torch.no_grad():
-                fake_cim = netG(Variable(real_sim), Variable(hint), Variable(feat_sim)).data
+                fake_cim = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage).data
             errD_fake = netD(Variable(fake_cim), Variable(feat_sim))[0].mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
@@ -255,12 +285,12 @@ for epoch in range(opt.niter):
             hint = torch.cat((real_vim * mask, mask), 1)
 
             feat_sim = netI(Variable(real_sim)).data
+            real_cim = real_cim_pooler(real_cim)
 
             fake = netG(Variable(real_sim), Variable(hint), Variable(feat_sim))
 
             if gen_iterations < opt.baseGeni:
                 contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
-                DMSELoss = contentLoss
                 errg = contentLoss
                 errg.backward()
             else:
@@ -268,7 +298,6 @@ for epoch in range(opt.niter):
                 errG = errd.mean(0).view(1) * opt.advW
                 errG.backward(mone, retain_graph=True)
                 contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
-                DMSELoss = contentLoss
                 errg = contentLoss
                 errg.backward()
 
@@ -283,7 +312,6 @@ for epoch in range(opt.niter):
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
-            writer.add_scalar('D MSE Loss', DMSELoss.data[0], gen_iterations)
             writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
             writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
             writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
@@ -303,10 +331,10 @@ for epoch in range(opt.niter):
 
     # do checkpointing
     if opt.cut == 0:
-        torch.save(netG.state_dict(), '%s/netG_epoch_only.pth' % opt.outf)
-        torch.save(netD.state_dict(), '%s/netD_epoch_only.pth' % opt.outf)
+        torch.save(netG.state_dict(), '%s/netG_epoch_only_%d.pth' % (opt.outf, opt.stage))
+        torch.save(netD.state_dict(), '%s/netD_epoch_only_%d.pth' % (opt.outf, opt.stage))
     elif epoch % opt.cut == 0:
-        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, epoch))
-        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, epoch))
+        torch.save(netG.state_dict(), '%s/netG_epoch_%d_%d.pth' % (opt.outf, epoch, opt.stage))
+        torch.save(netD.state_dict(), '%s/netD_epoch_%d_%d.pth' % (opt.outf, epoch, opt.stage))
     torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
     torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
