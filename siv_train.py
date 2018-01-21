@@ -39,8 +39,9 @@ parser.add_argument('--epoi', type=int, default=0, help='continue epoch num')
 parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight, default=0.01')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
-parser.add_argument('--gamma', type=float, default=1, help='wasserstein drift weight')
+parser.add_argument('--gamma', type=float, default=1, help='wasserstein lip constraint')
 parser.add_argument('--stage', type=int, required=True, help='training stage')
+parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
 
 opt = parser.parse_args()
 print(opt)
@@ -220,7 +221,9 @@ for epoch in range(opt.niter):
             errD_real = netD(Variable(real_cim), Variable(feat_sim))[0].mean(0).view(1)
             errD = errD_real - errD_fake
 
-            errD_realer = -1 * errD_real
+            errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift
+            # additional penalty term to keep the scores from drifting too far from zero
+
             errD_realer.backward(one, retain_graph=True)  # backward on score on real
 
             gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, feat_sim)
