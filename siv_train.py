@@ -210,7 +210,7 @@ for epoch in range(opt.niter):
             hint = torch.cat((real_vim * mask, mask), 1)
 
             feat_sim = netI(Variable(real_sim)).data
-            real_cim = real_cim_pooler(real_cim)
+            real_cim = real_cim_pooler(Variable(real_cim)).data
             # train with fake
             with torch.no_grad():
                 fake_cim = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage).data
@@ -285,7 +285,7 @@ for epoch in range(opt.niter):
             hint = torch.cat((real_vim * mask, mask), 1)
 
             feat_sim = netI(Variable(real_sim)).data
-            real_cim = real_cim_pooler(real_cim)
+            real_cim = real_cim_pooler(Variable(real_cim)).data
 
             fake = netG(Variable(real_sim), Variable(hint), Variable(feat_sim))
 
