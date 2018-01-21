@@ -314,8 +314,9 @@ class def_netF(nn.Module):
             *list(vgg16.features.children())[:9]
         )
         self.model = vgg16.features
-        self.register_buffer('mean', torch.FloatTensor([0.485 - 0.5, 0.456 - 0.5, 0.406 - 0.5]).view(1, 3, 1, 1))
-        self.register_buffer('std', torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+        self.register_buffer('mean',
+                             Variable(torch.FloatTensor([0.485 - 0.5, 0.456 - 0.5, 0.406 - 0.5]).view(1, 3, 1, 1)))
+        self.register_buffer('std', Variable(torch.FloatTensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)))
 
     def forward(self, images):
         return self.model((images.mul(0.5) - self.mean) / self.std)
@@ -361,7 +362,8 @@ class def_netI(nn.Module):
             *list(i2v_model.children())[:15]
         )
         self.model = i2v_model
-        self.register_buffer('mean', torch.FloatTensor([164.76139251, 167.47864617, 181.13838569]).view(1, 3, 1, 1))
+        self.register_buffer('mean',
+                             Variable(torch.FloatTensor([164.76139251, 167.47864617, 181.13838569]).view(1, 3, 1, 1)))
 
     def forward(self, images):
         images = F.avg_pool2d(images, 2, 2)
