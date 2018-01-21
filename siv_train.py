@@ -287,7 +287,7 @@ for epoch in range(opt.niter):
             feat_sim = netI(Variable(real_sim)).data
             real_cim = real_cim_pooler(Variable(real_cim)).data
 
-            fake = netG(Variable(real_sim), Variable(hint), Variable(feat_sim))
+            fake = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage)
 
             if gen_iterations < opt.baseGeni:
                 contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
@@ -323,7 +323,7 @@ for epoch in range(opt.niter):
 
         if gen_iterations % 500 == 0:
             with torch.no_grad():
-                fake = netG(Variable(fixed_sketch), Variable(fixed_hint), Variable(fixed_sketch_feat))
+                fake = netG(Variable(fixed_sketch), Variable(fixed_hint), Variable(fixed_sketch_feat), opt.stage)
             writer.add_image('colored imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),
                              gen_iterations)
 
