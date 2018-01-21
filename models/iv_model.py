@@ -366,4 +366,4 @@ class def_netI(nn.Module):
     def forward(self, images):
         images = F.avg_pool2d(images, 2, 2)
         images = images.mul(0.5).add(0.5).mul(255)
-        return self.model(torch.cat([images] * 3, 1) - self.mean)
+        return self.model(images.expand(-1, 3, 256, 256) - self.mean)
