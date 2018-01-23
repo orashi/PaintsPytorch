@@ -233,10 +233,10 @@ for epoch in range(opt.niter):
             mask = torch.cat([mask1, mask2], 0)
             hint = torch.cat((real_vim * mask, mask), 1)
 
-            feat_sim = netI(Variable(real_sim, volatile=True)).data
-            real_cim = real_cim_pooler(Variable(real_cim)).data
             # train with fake
             with torch.no_grad():
+                feat_sim = netI(Variable(real_sim)).data
+                real_cim = real_cim_pooler(Variable(real_cim)).data
                 fake_cim = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage).data
             errD_fake = netD(Variable(fake_cim), Variable(feat_sim))[0].mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
@@ -273,8 +273,8 @@ for epoch in range(opt.niter):
                                   0).cuda()
                 mask = torch.cat([mask1, mask2], 0)
                 hint = torch.cat((real_vim * mask, mask), 1)
-
-                feat_sim = netI(Variable(real_sim, volatile=True)).data
+                with torch.no_grad():
+                    feat_sim = netI(Variable(real_sim)).data
 
                 writer.add_image('target imgs', vutils.make_grid(real_cim.mul(0.5).add(0.5), nrow=4))
                 writer.add_image('sketch imgs', vutils.make_grid(real_sim.mul(0.5).add(0.5), nrow=4))
@@ -310,8 +310,9 @@ for epoch in range(opt.niter):
             mask = torch.cat([mask1, mask2], 0)
             hint = torch.cat((real_vim * mask, mask), 1)
 
-            feat_sim = netI(Variable(real_sim, volatile=True)).data
-            real_cim = real_cim_pooler(Variable(real_cim)).data
+            with torch.no_grad():
+                feat_sim = netI(Variable(real_sim)).data
+                real_cim = real_cim_pooler(Variable(real_cim)).data
 
             fake = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage)
 
