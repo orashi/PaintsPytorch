@@ -123,9 +123,9 @@ elif opt.stage == 1:
                      list(map(id, netG.module.up1.parameters())) + \
                      list(map(id, netG.module.exit0.parameters()))
 
-    base_params = itertools.chain(netG.module.up2.parameters(),
+    base_params = list(itertools.chain(netG.module.up2.parameters(),
                                   netG.module.tunnel1.parameters(),
-                                  netG.module.exit1.parameters())
+                                  netG.module.exit1.parameters()))
 
     finetune_params = []
     real_cim_pooler = lambda x: F.avg_pool2d(x, 2, 2)
@@ -233,7 +233,7 @@ for epoch in range(opt.niter):
             mask = torch.cat([mask1, mask2], 0)
             hint = torch.cat((real_vim * mask, mask), 1)
 
-            feat_sim = netI(Variable(real_sim)).data
+            feat_sim = netI(Variable(real_sim, volatile=True)).data
             real_cim = real_cim_pooler(Variable(real_cim)).data
             # train with fake
             with torch.no_grad():
@@ -274,7 +274,7 @@ for epoch in range(opt.niter):
                 mask = torch.cat([mask1, mask2], 0)
                 hint = torch.cat((real_vim * mask, mask), 1)
 
-                feat_sim = netI(Variable(real_sim)).data
+                feat_sim = netI(Variable(real_sim, volatile=True)).data
 
                 writer.add_image('target imgs', vutils.make_grid(real_cim.mul(0.5).add(0.5), nrow=4))
                 writer.add_image('sketch imgs', vutils.make_grid(real_sim.mul(0.5).add(0.5), nrow=4))
@@ -292,7 +292,7 @@ for epoch in range(opt.niter):
             for p in netD.parameters():
                 p.requires_grad = False  # to avoid computation
             for p in base_params:
-                p.requires_grad = True  # to avoid computation
+                p.requires_grad = True
             netG.zero_grad()
 
             data = data_iter.next()
@@ -310,7 +310,7 @@ for epoch in range(opt.niter):
             mask = torch.cat([mask1, mask2], 0)
             hint = torch.cat((real_vim * mask, mask), 1)
 
-            feat_sim = netI(Variable(real_sim)).data
+            feat_sim = netI(Variable(real_sim, volatile=True)).data
             real_cim = real_cim_pooler(Variable(real_cim)).data
 
             fake = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage)
