@@ -1,5 +1,6 @@
 import argparse
 import os
+import itertools
 import random
 from math import log10
 import scipy.stats as stats
@@ -122,8 +123,11 @@ elif opt.stage == 1:
                      list(map(id, netG.module.up1.parameters())) + \
                      list(map(id, netG.module.exit0.parameters()))
 
-    base_params = filter(lambda p: id(p) not in ignored_params,
-                         netG.parameters())
+    base_params = itertools.chain(netG.module.up2.parameters(),
+                                  netG.module.tunnel1.parameters(),
+                                  netG.module.exit1.parameters())
+
+    finetune_params = []
     real_cim_pooler = lambda x: F.avg_pool2d(x, 2, 2)
 
 else:
@@ -133,6 +137,23 @@ else:
     base_params = filter(lambda p: id(p) not in ignored_params,
                          netG.parameters())
     real_cim_pooler = lambda x: x
+
+# elif opt.stage == 1:
+#     ignored_params = list(map(id, netG.module.exit2.parameters())) + \
+#                      list(map(id, netG.module.up1.parameters())) + \
+#                      list(map(id, netG.module.exit0.parameters()))
+#
+#     base_params = filter(lambda p: id(p) not in ignored_params,
+#                          netG.parameters())
+#     real_cim_pooler = lambda x: F.avg_pool2d(x, 2, 2)
+#
+# else:
+#     ignored_params = list(map(id, netG.module.exit2.parameters())) + \
+#                      list(map(id, netG.module.exit1.parameters()))
+#
+#     base_params = filter(lambda p: id(p) not in ignored_params,
+#                          netG.parameters())
+#     real_cim_pooler = lambda x: x
 
 optimizerG = optim.Adam(base_params, lr=opt.lrG, betas=(opt.beta1, 0.9))
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
@@ -169,6 +190,8 @@ mu, sigma = 1, 0.005
 maskS = opt.imageSize // 4
 X = stats.truncnorm(
     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+for p in netG.parameters():
+    p.requires_grad = False  # to avoid computation
 
 for epoch in range(opt.niter):
     data_iter = iter(dataloader)
@@ -179,7 +202,7 @@ for epoch in range(opt.niter):
         ###########################
         for p in netD.parameters():  # reset requires_grad
             p.requires_grad = True  # they are set to False below in netG update
-        for p in netG.parameters():
+        for p in base_params:
             p.requires_grad = False  # to avoid computation
 
         # train the discriminator Diters times
@@ -268,7 +291,7 @@ for epoch in range(opt.niter):
 
             for p in netD.parameters():
                 p.requires_grad = False  # to avoid computation
-            for p in netG.parameters():
+            for p in base_params:
                 p.requires_grad = True  # to avoid computation
             netG.zero_grad()
 
