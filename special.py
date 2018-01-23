@@ -74,6 +74,12 @@ if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
 print(netG)
 
+netG2 = torch.nn.DataParallel(def_netG(ngf=opt.ngf))
+netG2.load_state_dict(torch.load('../monitors/YanSIV_0.001_f/netG_epoch_only_2.pth'))
+netG.module.up2 = netG2.module.up2
+netG.module.tunnel1 = netG2.module.tunnel1
+netG.module.exit1 = netG2.module.exit1
+
 netD = torch.nn.DataParallel(def_netD(ndf=opt.ndf, stage=opt.stage))
 if opt.netD != '':
     netD.load_state_dict(torch.load(opt.netD))
