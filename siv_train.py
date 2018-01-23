@@ -125,8 +125,8 @@ elif opt.stage == 1:
                      list(map(id, netG.module.exit0.parameters()))
 
     if opt.ft:
-        base_params = filter(lambda p: id(p) not in ignored_params,
-                             netG.parameters())
+        base_params = list(filter(lambda p: id(p) not in ignored_params,
+                                  netG.parameters()))
     else:
         base_params = list(itertools.chain(netG.module.up2.parameters(),
                                            netG.module.tunnel1.parameters(),
@@ -139,8 +139,8 @@ else:
                      list(map(id, netG.module.exit1.parameters()))
 
     if opt.ft:
-        base_params = filter(lambda p: id(p) not in ignored_params,
-                             netG.parameters())
+        base_params = list(filter(lambda p: id(p) not in ignored_params,
+                                  netG.parameters()))
     else:
         base_params = list(itertools.chain(netG.module.up1.parameters(),
                                            netG.module.exit0.parameters()))

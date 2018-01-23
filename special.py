@@ -75,7 +75,7 @@ if opt.netG != '':
 print(netG)
 
 netG2 = torch.nn.DataParallel(def_netG(ngf=opt.ngf))
-netG2.load_state_dict(torch.load('../monitors/YanSIV_0.001_f/netG_epoch_only_2.pth'))
+netG2.load_state_dict(torch.load('../monitors/YanSIV_0.001_f/netG_epoch_only_1.pth'))
 netG.module.up2 = netG2.module.up2
 netG.module.tunnel1 = netG2.module.tunnel1
 netG.module.exit1 = netG2.module.exit1
@@ -131,8 +131,8 @@ elif opt.stage == 1:
                      list(map(id, netG.module.exit0.parameters()))
 
     if opt.ft:
-        base_params = filter(lambda p: id(p) not in ignored_params,
-                             netG.parameters())
+        base_params = list(filter(lambda p: id(p) not in ignored_params,
+                                  netG.parameters()))
     else:
         base_params = list(itertools.chain(netG.module.up2.parameters(),
                                            netG.module.tunnel1.parameters(),
@@ -145,8 +145,8 @@ else:
                      list(map(id, netG.module.exit1.parameters()))
 
     if opt.ft:
-        base_params = filter(lambda p: id(p) not in ignored_params,
-                             netG.parameters())
+        base_params = list(filter(lambda p: id(p) not in ignored_params,
+                                  netG.parameters()))
     else:
         base_params = list(itertools.chain(netG.module.up1.parameters(),
                                            netG.module.exit0.parameters()))
