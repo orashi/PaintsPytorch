@@ -231,7 +231,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask_gen(opt.zero_mask)
+            mask = mask_gen(opt.zero_mask)
             hint = torch.cat((real_vim * mask, mask), 1)
 
             # train with fake
@@ -303,7 +303,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask_gen(opt.zero_mask)
+            mask = mask_gen(opt.zero_mask)
             hint = torch.cat((real_vim * mask, mask), 1)
 
             with torch.no_grad():
