@@ -31,6 +31,7 @@ parser.add_argument('--netG', default='', help="path to netG (to continue traini
 parser.add_argument('--netD', default='', help="path to netD (to continue training)")
 parser.add_argument('--optim', action='store_true', help='load optimizer\'s checkpoint')
 parser.add_argument('--ft', action='store_true', help='finetune?')
+parser.add_argument('--zero_mask', action='store_true', help='finetune?')
 parser.add_argument('--outf', default='.', help='folder to output images and model checkpoints')
 parser.add_argument('--optf', default='.', help='folder to optimizer checkpoints')
 parser.add_argument('--Diters', type=int, default=1, help='number of D iters per each G iter')
@@ -175,6 +176,20 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch):
     return gradient_penalty
 
 
+def mask_gen(zero_mask):
+    if zero_mask:
+        mask1 = torch.cat(
+            [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize // 2)],
+            0).cuda()
+        mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
+                          0).cuda()
+        mask = torch.cat([mask1, mask2], 0)
+    else:
+        mask = torch.cat([torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)],
+                         0).cuda()
+    return mask
+
+
 flag = 1
 lower, upper = 0, 1
 mu, sigma = 1, 0.005
@@ -216,12 +231,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask1 = torch.cat(
-                [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize // 2)],
-                0).cuda()
-            mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
-                              0).cuda()
-            mask = torch.cat([mask1, mask2], 0)
+            mask_gen(opt.zero_mask)
             hint = torch.cat((real_vim * mask, mask), 1)
 
             # train with fake
@@ -293,12 +303,7 @@ for epoch in range(opt.niter):
             if opt.cuda:
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
-            mask1 = torch.cat(
-                [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize // 2)],
-                0).cuda()
-            mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
-                              0).cuda()
-            mask = torch.cat([mask1, mask2], 0)
+            mask_gen(opt.zero_mask)
             hint = torch.cat((real_vim * mask, mask), 1)
 
             with torch.no_grad():
