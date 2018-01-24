@@ -151,7 +151,7 @@ class def_netG(nn.Module):
 
 class def_netD512(nn.Module):
     def __init__(self, ndf=64):
-        super(def_netD, self).__init__()
+        super(def_netD512, self).__init__()
 
         self.feed = nn.Sequential(nn.Conv2d(3, ndf, kernel_size=7, stride=1, padding=3, bias=False),  # 512
                                   nn.LeakyReLU(0.2, True),
