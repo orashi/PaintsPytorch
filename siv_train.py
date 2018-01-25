@@ -95,7 +95,7 @@ L2_dist = nn.PairwiseDistance(2)
 one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
-zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch)
+zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(4,1)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
