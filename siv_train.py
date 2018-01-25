@@ -323,7 +323,7 @@ for epoch in range(opt.niter):
             else:
                 if opt.zero_mask:
                     errd = netD(fake, Variable(feat_sim))
-                    errG = errd.mean(0).view(1) * zero_mask_advW
+                    errG = (errd * zero_mask_advW).mean(0).view(1)
                     errG.backward(mone, retain_graph=True)
                     contentLoss = criterion_MSE(netF(fake[:opt.batchSize // 2]),
                                                 netF(Variable(real_cim[:opt.batchSize // 2])))
