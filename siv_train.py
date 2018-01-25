@@ -41,6 +41,7 @@ parser.add_argument('--geni', type=int, default=0, help='continue gen image num'
 parser.add_argument('--epoi', type=int, default=0, help='continue epoch num')
 parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight, default=0.01')
+parser.add_argument('--advW2', type=float, default=1, help='adversarial weight, default=0.01')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein lip constraint')
 parser.add_argument('--stage', type=int, required=True, help='training stage')
@@ -93,6 +94,8 @@ criterion_MSE = nn.MSELoss()
 L2_dist = nn.PairwiseDistance(2)
 one = torch.FloatTensor([1])
 mone = one * -1
+half_batch = opt.batchSize // 2
+zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
@@ -107,6 +110,7 @@ if opt.cuda:
     criterion_L1 = criterion_L1.cuda()
     criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
+    zero_mask_advW = zero_mask_advW.cuda()
 
 # setup optimizer
 if opt.stage == 2:
@@ -319,9 +323,10 @@ for epoch in range(opt.niter):
             else:
                 if opt.zero_mask:
                     errd = netD(fake, Variable(feat_sim))
-                    errG = errd.mean(0).view(1) * opt.advW
+                    errG = errd.mean(0).view(1) * zero_mask_advW
                     errG.backward(mone, retain_graph=True)
-                    contentLoss = criterion_MSE(netF(fake[:opt.batchSize // 2]), netF(Variable(real_cim[:opt.batchSize // 2])))
+                    contentLoss = criterion_MSE(netF(fake[:opt.batchSize // 2]),
+                                                netF(Variable(real_cim[:opt.batchSize // 2])))
                     errg = contentLoss
                     errg.backward()
                 else:
