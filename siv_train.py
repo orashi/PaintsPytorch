@@ -110,7 +110,7 @@ if opt.cuda:
     criterion_L1 = criterion_L1.cuda()
     criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
-    # zero_mask_advW = zero_mask_advW.cuda()
+    zero_mask_advW = Variable(zero_mask_advW.cuda())
 
 # setup optimizer
 if opt.stage == 2:
