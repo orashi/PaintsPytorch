@@ -317,12 +317,20 @@ for epoch in range(opt.niter):
                 errg = contentLoss
                 errg.backward()
             else:
-                errd = netD(fake, Variable(feat_sim))
-                errG = errd.mean(0).view(1) * opt.advW
-                errG.backward(mone, retain_graph=True)
-                contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
-                errg = contentLoss
-                errg.backward()
+                if opt.zero_mask:
+                    errd = netD(fake, Variable(feat_sim))
+                    errG = errd.mean(0).view(1) * opt.advW
+                    errG.backward(mone, retain_graph=True)
+                    contentLoss = criterion_MSE(netF(fake[:opt.batchSize // 2]), netF(Variable(real_cim[:opt.batchSize // 2])))
+                    errg = contentLoss
+                    errg.backward()
+                else:
+                    errd = netD(fake, Variable(feat_sim))
+                    errG = errd.mean(0).view(1) * opt.advW
+                    errG.backward(mone, retain_graph=True)
+                    contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
+                    errg = contentLoss
+                    errg.backward()
 
             optimizerG.step()
 
