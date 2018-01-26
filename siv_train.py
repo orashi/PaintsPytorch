@@ -96,7 +96,7 @@ L2_dist = nn.PairwiseDistance(2)
 one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
-zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(4, 1)
+zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(opt.batchSize, 1)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
@@ -330,7 +330,7 @@ for epoch in range(opt.niter):
                         feat2 = netF(Variable(real_cim))
 
                     contentLoss1 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
-                    contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
+                    contentLoss2 = criterion_MSE(feat1[:opt.batchSize // 2], feat2[:opt.batchSize // 2])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
                     contentLoss.backward()
                 else:
