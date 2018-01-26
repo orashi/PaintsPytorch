@@ -40,8 +40,9 @@ parser.add_argument('--baseGeni', type=int, default=2500, help='start base of pu
 parser.add_argument('--geni', type=int, default=0, help='continue gen image num')
 parser.add_argument('--epoi', type=int, default=0, help='continue epoch num')
 parser.add_argument('--env', type=str, default=None, help='tensorboard env')
-parser.add_argument('--advW', type=float, default=0.01, help='adversarial weight, default=0.01')
-parser.add_argument('--advW2', type=float, default=1, help='adversarial weight, default=0.01')
+parser.add_argument('--advW', type=float, default=0.0001, help='adversarial weight, default=0.0001')
+parser.add_argument('--advW2', type=float, default=0.0001, help='adversarial weight, default=0.0001')
+parser.add_argument('--contW', type=float, default=1, help='relative contents weight, default=1')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein lip constraint')
 parser.add_argument('--stage', type=int, required=True, help='training stage')
@@ -95,7 +96,7 @@ L2_dist = nn.PairwiseDistance(2)
 one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
-zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(4,1)
+zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(4, 1)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
@@ -318,24 +319,29 @@ for epoch in range(opt.niter):
 
             if gen_iterations < opt.baseGeni:
                 contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
-                errg = contentLoss
-                errg.backward()
+                contentLoss.backward()
             else:
                 if opt.zero_mask:
                     errd = netD(fake, Variable(feat_sim))
                     errG = (errd * zero_mask_advW).mean(0).view(1)
                     errG.backward(mone, retain_graph=True)
-                    contentLoss = criterion_MSE(netF(fake[:opt.batchSize // 2]),
-                                                netF(Variable(real_cim[:opt.batchSize // 2])))
-                    errg = contentLoss
-                    errg.backward()
+                    feat1 = netF(fake)
+                    with torch.no_grad():
+                        feat2 = netF(Variable(real_cim))
+
+                    contentLoss1 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
+                    contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
+                    contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
+                    contentLoss.backward()
                 else:
                     errd = netD(fake, Variable(feat_sim))
                     errG = errd.mean(0).view(1) * opt.advW
                     errG.backward(mone, retain_graph=True)
-                    contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
-                    errg = contentLoss
-                    errg.backward()
+                    feat1 = netF(fake)
+                    with torch.no_grad():
+                        feat2 = netF(Variable(real_cim))
+                    contentLoss = criterion_MSE(feat1, feat2)
+                    contentLoss.backward()
 
             optimizerG.step()
 
