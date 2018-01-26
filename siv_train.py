@@ -329,8 +329,8 @@ for epoch in range(opt.niter):
                     with torch.no_grad():
                         feat2 = netF(Variable(real_cim))
 
-                    contentLoss1 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
-                    contentLoss2 = criterion_MSE(feat1[:opt.batchSize // 2], feat2[:opt.batchSize // 2])
+                    contentLoss1 = criterion_MSE(feat1[:opt.batchSize // 2], feat2[:opt.batchSize // 2])
+                    contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
                     contentLoss.backward()
                 else:
