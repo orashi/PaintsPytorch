@@ -158,6 +158,10 @@ optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 if opt.optim:
     optimizerG.load_state_dict(torch.load('%s/optimG_checkpoint.pth' % opt.optf))
     optimizerD.load_state_dict(torch.load('%s/optimD_checkpoint.pth' % opt.optf))
+    for param_group in optimizerG.param_groups:
+        param_group['lr'] = opt.lrG
+    for param_group in optimizerD.param_groups:
+        param_group['lr'] = opt.lrD
 
 
 def calc_gradient_penalty(netD, real_data, fake_data, sketch):
