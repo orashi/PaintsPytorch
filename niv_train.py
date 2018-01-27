@@ -164,9 +164,9 @@ else:
     real_cim_pooler = lambda x: x
 
 optimizerG = optim.Adam([
-            {'params': base_params},
-            {'params': ft_params, 'lr': 1e-5}
-            ], lr=opt.lrG, betas=(opt.beta1, 0.9))
+    {'params': base_params},
+    {'params': ft_params, 'lr': 1e-5}
+], lr=opt.lrG, betas=(opt.beta1, 0.9))
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 
 if opt.optim:
@@ -298,7 +298,8 @@ for epoch in range(opt.niter):
                 mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(8)],
                                   0).cuda()
                 mask = torch.cat([mask1, mask2], 0)
-                hint = torch.cat((real_vim * mask, mask, noise.normal_()), 1)
+                hint = torch.cat(
+                    (real_vim * mask, mask, torch.Tensor(16, 1, opt.imageSize // 4, opt.imageSize // 4).normal_()), 1)
                 with torch.no_grad():
                     feat_sim = netI(Variable(real_sim)).data
 
