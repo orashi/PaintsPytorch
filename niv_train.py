@@ -100,6 +100,7 @@ one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
 zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(opt.batchSize, 1)
+noise = torch.Tensor(opt.batchSize, 1, opt.imageSize // 4, opt.imageSize // 4)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
@@ -255,7 +256,7 @@ for epoch in range(opt.niter):
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
             mask = mask_gen(opt.zero_mask)
-            hint = torch.cat((real_vim * mask, mask, torch.Tensor(mask.shape).normal_()), 1)
+            hint = torch.cat((real_vim * mask, mask, noise.normal_()), 1)
 
             # train with fake
             with torch.no_grad():
@@ -296,7 +297,7 @@ for epoch in range(opt.niter):
                 mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(8)],
                                   0).cuda()
                 mask = torch.cat([mask1, mask2], 0)
-                hint = torch.cat((real_vim * mask, mask, torch.Tensor(mask.shape).normal_()), 1)
+                hint = torch.cat((real_vim * mask, mask, noise.normal_()), 1)
                 with torch.no_grad():
                     feat_sim = netI(Variable(real_sim)).data
 
@@ -329,7 +330,7 @@ for epoch in range(opt.niter):
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
             mask = mask_gen(opt.zero_mask)
-            hint = torch.cat((real_vim * mask, mask, torch.Tensor(mask.shape).normal_()), 1)
+            hint = torch.cat((real_vim * mask, mask, noise.normal_()), 1)
 
             with torch.no_grad():
                 feat_sim = netI(Variable(real_sim)).data
