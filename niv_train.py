@@ -116,6 +116,7 @@ if opt.cuda:
     criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
     zero_mask_advW = Variable(zero_mask_advW.cuda())
+    noise = noise.cuda()
 
 # setup optimizer
 if opt.stage == 2:
