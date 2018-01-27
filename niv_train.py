@@ -136,12 +136,6 @@ elif opt.stage == 1:
     if opt.ft:
         base_params = list(filter(lambda p: id(p) not in ignored_params,
                                   netG.parameters()))
-    elif opt.nft:
-        base_params = list(netG.module.toH.parameters())
-        ft_params = list(itertools.chain(netG.module.to3.parameters(),
-                                         netG.module.tunnel4.parameters(),
-                                         netG.module.tunnel3.parameters(),
-                                         netG.module.to4.parameters()))
     else:
         base_params = list(itertools.chain(netG.module.up2.parameters(),
                                            netG.module.tunnel1.parameters(),
@@ -156,6 +150,12 @@ else:
     if opt.ft:
         base_params = list(filter(lambda p: id(p) not in ignored_params,
                                   netG.parameters()))
+    elif opt.nft:
+        base_params = list(netG.module.toH.parameters())
+        ft_params = list(itertools.chain(netG.module.to3.parameters(),
+                                         netG.module.tunnel4.parameters(),
+                                         netG.module.tunnel3.parameters(),
+                                         netG.module.to4.parameters()))
     else:
         base_params = list(itertools.chain(netG.module.up1.parameters(),
                                            netG.module.exit0.parameters()))
@@ -163,7 +163,7 @@ else:
 
 optimizerG = optim.Adam([
             {'params': base_params},
-            {'params': ft_params, 'lr': 1e-4}
+            {'params': ft_params, 'lr': 1e-5}
             ], lr=opt.lrG, betas=(opt.beta1, 0.9))
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 
