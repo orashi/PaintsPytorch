@@ -152,7 +152,7 @@ class def_netG(nn.Module):
 def cal_var(color):
     color_s = color[4:]
     mean_sat_data = color_s.mean(0)
-    return (color_s.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean()
+    return (color_s.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean().expand(8, 1, 4, 4)
 
 
 class def_netD512(nn.Module):
@@ -206,8 +206,7 @@ class def_netD512(nn.Module):
 
         x = self.feed2(torch.cat([x, sketch_feat], 1))
 
-        scalar = variance.expand(x.size(0), 1, x.size(2), x.size(3))  # [N,1,H,W]
-        x = torch.cat([x, scalar], dim=1)
+        x = torch.cat([x, variance], dim=1)
         x = self.feed3(x)
 
         return self.out(x.view(color.size(0), -1))
