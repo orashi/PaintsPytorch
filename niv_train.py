@@ -185,7 +185,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch):
         interpolates = interpolates.cuda()
     interpolates = Variable(interpolates, requires_grad=True)
 
-    disc_interpolates = netD(interpolates, Variable(sketch))[0]
+    disc_interpolates = netD(interpolates, Variable(sketch), cal_var(interpolates))[0]
 
     gradients = grad(outputs=disc_interpolates, inputs=interpolates,
                      grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
@@ -259,10 +259,10 @@ for epoch in range(opt.niter):
                 feat_sim = netI(Variable(real_sim)).data
                 real_cim = real_cim_pooler(Variable(real_cim)).data
                 fake_cim = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage).data
-            errD_fake = netD(Variable(fake_cim), Variable(feat_sim))[0].mean(0).view(1)
+            errD_fake = netD(Variable(fake_cim), Variable(feat_sim), Variable(cal_var(fake_cim)))[0].mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_real = netD(Variable(real_cim), Variable(feat_sim))[0].mean(0).view(1)
+            errD_real = netD(Variable(real_cim), Variable(feat_sim), Variable(cal_var(real_cim)))[0].mean(0).view(1)
             errD = errD_real - errD_fake
 
             errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift
@@ -339,7 +339,7 @@ for epoch in range(opt.niter):
                 contentLoss.backward()
             else:
                 if opt.zero_mask:
-                    errd = netD(fake, Variable(feat_sim))
+                    errd = netD(fake, Variable(feat_sim), cal_var(fake))
                     errG = (errd * zero_mask_advW).mean(0).view(1)
                     errG.backward(mone, retain_graph=True)
                     feat1 = netF(fake)
@@ -351,7 +351,7 @@ for epoch in range(opt.niter):
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
                     contentLoss.backward()
                 else:
-                    errd = netD(fake, Variable(feat_sim))
+                    errd = netD(fake, Variable(feat_sim), cal_var(fake))
                     errG = errd.mean(0).view(1) * opt.advW
                     errG.backward(mone, retain_graph=True)
                     feat1 = netF(fake)
