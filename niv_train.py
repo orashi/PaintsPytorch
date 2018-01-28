@@ -74,9 +74,9 @@ writer = SummaryWriter(log_dir=opt.env, comment='this is great')
 dataloader = CreateDataLoader(opt)
 
 netG = torch.nn.DataParallel(def_netG(ngf=opt.ngf))
+netG.module.toH = nn.Sequential(nn.Conv2d(5, opt.ngf, kernel_size=7, stride=1, padding=3), nn.LeakyReLU(0.2, True))
 if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
-netG.module.toH = nn.Sequential(nn.Conv2d(5, opt.ngf, kernel_size=7, stride=1, padding=3), nn.LeakyReLU(0.2, True))
 
 print(netG)
 
@@ -163,10 +163,7 @@ else:
                                            netG.module.exit0.parameters()))
     real_cim_pooler = lambda x: x
 
-optimizerG = optim.Adam([
-    {'params': base_params},
-    {'params': ft_params, 'lr': 1e-5}
-], lr=opt.lrG, betas=(opt.beta1, 0.9))
+optimizerG = optim.Adam(base_params, lr=opt.lrG, betas=(opt.beta1, 0.9))
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 
 if opt.optim:
@@ -233,8 +230,6 @@ for epoch in range(opt.niter):
             p.requires_grad = True  # they are set to False below in netG update
         for p in base_params:
             p.requires_grad = False  # to avoid computation ft_params
-        for p in ft_params:
-            p.requires_grad = False  # to avoid computation ft_params
 
         # train the discriminator Diters times
         Diters = opt.Diters
@@ -299,7 +294,7 @@ for epoch in range(opt.niter):
                                   0).cuda()
                 mask = torch.cat([mask1, mask2], 0)
                 hint = torch.cat(
-                    (real_vim * mask, mask, torch.Tensor(16, 1, opt.imageSize // 4, opt.imageSize // 4).normal_()), 1)
+                    (real_vim * mask, mask, torch.Tensor(16, 1, opt.imageSize // 4, opt.imageSize // 4).normal_().cuda()), 1)
                 with torch.no_grad():
                     feat_sim = netI(Variable(real_sim)).data
 
@@ -320,8 +315,6 @@ for epoch in range(opt.niter):
                 p.requires_grad = False  # to avoid computation
             for p in base_params:
                 p.requires_grad = True
-            for p in ft_params:
-                p.requires_grad = True  # to avoid computation ft_params
             netG.zero_grad()
 
             data = data_iter.next()
