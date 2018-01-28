@@ -182,16 +182,22 @@ class def_netD512(nn.Module):
                                    ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 8
                                    ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
                                    ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 4
+                                   ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1)
                                    )
 
-        self.feed3 = nn.Sequential(ResNeXtBottleneck(ndf * 8 + 1, ndf * 8, cardinality=8, dilate=1),
-                                   nn.Conv2d(ndf * 8, ndf * 8, kernel_size=4, stride=1, padding=0, bias=False),  # 1
+        self.feed3 = nn.Sequential(nn.Conv2d(ndf * 8 + 1, ndf * 8, kernel_size=4, stride=1, padding=0, bias=False),  # 1
                                    nn.LeakyReLU(0.2, True)
                                    )
 
         self.out = nn.Linear(512, 1)
 
+    def variance(self, color):
+        color = color[4:]
+        mean_sat_data = color.mean(0)
+        return (color.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean()
+
     def forward(self, color, sketch_feat):
+
         maxc = color.max(1)[0]
         minc = color.min(1)[0]
         s = (maxc - minc) / (maxc + 1e-8)
@@ -199,8 +205,8 @@ class def_netD512(nn.Module):
         x = self.feed(torch.cat([color, s.sub(0.5).mul(2).unsqueeze(1)], 1))
 
         x = self.feed2(torch.cat([x, sketch_feat], 1))
-        std = ((x - x.mean(dim=0, keepdim=True)).pow(2).mean(dim=0, keepdim=True) + 1e-8).sqrt().mean()
-        scalar = std.expand(x.size(0), 1, x.size(2), x.size(3))  # [N,1,H,W]
+
+        scalar = self.variance(color).expand(x.size(0), 1, x.size(2), x.size(3))  # [N,1,H,W]
         x = torch.cat([x, scalar], dim=1)
         x = self.feed3(x)
 
