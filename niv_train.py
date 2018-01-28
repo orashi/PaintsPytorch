@@ -259,10 +259,10 @@ for epoch in range(opt.niter):
                 feat_sim = netI(Variable(real_sim)).data
                 real_cim = real_cim_pooler(Variable(real_cim)).data
                 fake_cim = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage).data
-            errD_fake = netD(Variable(fake_cim), Variable(feat_sim), Variable(cal_var(fake_cim)))[0].mean(0).view(1)
+            errD_fake = netD(Variable(fake_cim), Variable(feat_sim), cal_var(Variable(fake_cim)))[0].mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_real = netD(Variable(real_cim), Variable(feat_sim), Variable(cal_var(real_cim)))[0].mean(0).view(1)
+            errD_real = netD(Variable(real_cim), Variable(feat_sim), cal_var(Variable(real_cim)))[0].mean(0).view(1)
             errD = errD_real - errD_fake
 
             errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift
