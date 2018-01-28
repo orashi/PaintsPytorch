@@ -42,7 +42,6 @@ parser.add_argument('--geni', type=int, default=0, help='continue gen image num'
 parser.add_argument('--epoi', type=int, default=0, help='continue epoch num')
 parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.0001, help='adversarial weight, default=0.0001')
-parser.add_argument('--advW2', type=float, default=0.0001, help='adversarial weight, default=0.0001')
 parser.add_argument('--contW', type=float, default=1, help='relative contents weight, default=1')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein lip constraint')
@@ -99,7 +98,6 @@ L2_dist = nn.PairwiseDistance(2)
 one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
-zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(opt.batchSize, 1)
 noise = torch.Tensor(opt.batchSize, 1, opt.imageSize // 4, opt.imageSize // 4)
 
 fixed_sketch = torch.FloatTensor()
@@ -115,7 +113,6 @@ if opt.cuda:
     criterion_L1 = criterion_L1.cuda()
     criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
-    zero_mask_advW = Variable(zero_mask_advW.cuda())
     noise = noise.cuda()
 
 # setup optimizer
@@ -340,7 +337,7 @@ for epoch in range(opt.niter):
             else:
                 if opt.zero_mask:
                     errd = netD(fake, Variable(feat_sim), cal_var(fake))
-                    errG = (errd * zero_mask_advW).mean(0).view(1)
+                    errG = errd.mean(0).view(1) * opt.advW
                     errG.backward(mone, retain_graph=True)
                     feat1 = netF(fake)
                     with torch.no_grad():
