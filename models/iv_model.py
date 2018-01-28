@@ -191,11 +191,6 @@ class def_netD512(nn.Module):
 
         self.out = nn.Linear(512, 1)
 
-    def variance(self, color):
-        color = color[4:]
-        mean_sat_data = color.mean(0)
-        return (color.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean()
-
     def forward(self, color, sketch_feat):
 
         maxc = color.max(1)[0]
@@ -206,7 +201,11 @@ class def_netD512(nn.Module):
 
         x = self.feed2(torch.cat([x, sketch_feat], 1))
 
-        scalar = self.variance(color).expand(x.size(0), 1, x.size(2), x.size(3))  # [N,1,H,W]
+        color_s = color[4:]
+        mean_sat_data = color_s.mean(0)
+        variance = (color_s.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean()
+
+        scalar = variance.expand(x.size(0), 1, x.size(2), x.size(3))  # [N,1,H,W]
         x = torch.cat([x, scalar], dim=1)
         x = self.feed3(x)
 
