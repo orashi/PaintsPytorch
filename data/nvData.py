@@ -14,7 +14,6 @@ IMG_EXTENSIONS = [
     '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
 ]
 
-
 class RandomCrop(object):
     """Crops the given PIL.Image at a random location to have a region of
     the given size. size can be a tuple (target_height, target_width)
@@ -137,7 +136,6 @@ class ImageFolder(data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
-
 
 def CreateDataLoader(opt):
     random.seed(opt.manualSeed)

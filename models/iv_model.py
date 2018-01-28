@@ -153,7 +153,7 @@ class def_netD512(nn.Module):
     def __init__(self, ndf=64):
         super(def_netD512, self).__init__()
 
-        self.feed = nn.Sequential(nn.Conv2d(3, ndf, kernel_size=7, stride=1, padding=3, bias=False),  # 512
+        self.feed = nn.Sequential(nn.Conv2d(4, ndf, kernel_size=7, stride=1, padding=3, bias=False),  # 512
                                   nn.LeakyReLU(0.2, True),
                                   nn.Conv2d(ndf, ndf, kernel_size=4, stride=2, padding=1, bias=False),  # 256
                                   nn.LeakyReLU(0.2, True),
@@ -192,7 +192,11 @@ class def_netD512(nn.Module):
         self.out = nn.Linear(512, 1)
 
     def forward(self, color, sketch_feat):
-        x = self.feed(color)
+        maxc = color.max(1)[0]
+        minc = color.min(1)[0]
+        s = (maxc - minc) / (maxc + 1e-8)
+
+        x = self.feed(torch.cat([color, s.sub(0.5).mul(2)], 1))
 
         x = self.feed2(torch.cat([x, sketch_feat], 1))
         std = ((x - x.mean(dim=0, keepdim=True)).pow(2).mean(dim=0, keepdim=True) + 1e-8).sqrt().mean()

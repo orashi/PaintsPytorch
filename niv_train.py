@@ -294,7 +294,8 @@ for epoch in range(opt.niter):
                                   0).cuda()
                 mask = torch.cat([mask1, mask2], 0)
                 hint = torch.cat(
-                    (real_vim * mask, mask, torch.Tensor(16, 1, opt.imageSize // 4, opt.imageSize // 4).normal_().cuda()), 1)
+                    (real_vim * mask, mask,
+                     torch.Tensor(16, 1, opt.imageSize // 4, opt.imageSize // 4).normal_().cuda()), 1)
                 with torch.no_grad():
                     feat_sim = netI(Variable(real_sim)).data
 
