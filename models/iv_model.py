@@ -196,7 +196,7 @@ class def_netD512(nn.Module):
         minc = color.min(1)[0]
         s = (maxc - minc) / (maxc + 1e-8)
 
-        x = self.feed(torch.cat([color, s.sub(0.5).mul(2)], 1))
+        x = self.feed(torch.cat([color, s.sub(0.5).mul(2).unsqueeze(1)], 1))
 
         x = self.feed2(torch.cat([x, sketch_feat], 1))
         std = ((x - x.mean(dim=0, keepdim=True)).pow(2).mean(dim=0, keepdim=True) + 1e-8).sqrt().mean()
