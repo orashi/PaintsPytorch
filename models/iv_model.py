@@ -151,9 +151,8 @@ class def_netG(nn.Module):
 
 
 def cal_var(color):
-    color_s = color[4:]
-    mean_sat_data = color_s.mean(0)
-    return (color_s.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean()
+    mean_sat_data = color.mean(0)
+    return (color.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean()
 
 
 def cal_var_loss(fake):
