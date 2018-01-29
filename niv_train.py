@@ -357,7 +357,7 @@ for epoch in range(opt.niter):
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
                     varLoss = cal_var_loss(fake)
-                    Loss = varLoss + contentLoss
+                    Loss = F.relu(varLoss) + contentLoss
                     Loss.backward()
                 else:
                     # ignore this part
@@ -395,7 +395,7 @@ for epoch in range(opt.niter):
             with torch.no_grad():
                 fake = netG(Variable(fixed_sketch),
                             Variable(fixed_hint),
-                            Variable(fixed_noise, require_grad=False),
+                            Variable(fixed_noise, requires_grad=False),
                             Variable(fixed_sketch_feat),
                             opt.stage)
             writer.add_image('colored imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),

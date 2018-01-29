@@ -156,7 +156,7 @@ def cal_var(color):
 
 
 def cal_var_loss(fake):
-    return F.relu(cal_var(fake[:4].detach()) - cal_var(fake[4:]))
+    return cal_var(fake[:4].detach()) - cal_var(fake[4:])
 
 
 class def_netD512(nn.Module):
