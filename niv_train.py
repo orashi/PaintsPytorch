@@ -74,7 +74,6 @@ writer = SummaryWriter(log_dir=opt.env, comment='this is great')
 dataloader = CreateDataLoader(opt)
 
 netG = torch.nn.DataParallel(def_netG(ngf=opt.ngf))
-netG.module.toH = nn.Sequential(nn.Conv2d(5, opt.ngf, kernel_size=7, stride=1, padding=3), nn.LeakyReLU(0.2, True))
 if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
 
@@ -100,7 +99,7 @@ one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
 zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(opt.batchSize, 1)
-noise = torch.Tensor(opt.batchSize, 1, opt.imageSize // 4, opt.imageSize // 4)
+noise = torch.Tensor(opt.batchSize, opt.ngf, 1, 1)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
@@ -185,7 +184,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch):
         interpolates = interpolates.cuda()
     interpolates = Variable(interpolates, requires_grad=True)
 
-    disc_interpolates = netD(interpolates, Variable(sketch), cal_var(interpolates))[0]
+    disc_interpolates = netD(interpolates, Variable(sketch))[0]
 
     gradients = grad(outputs=disc_interpolates, inputs=interpolates,
                      grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
@@ -252,17 +251,22 @@ for epoch in range(opt.niter):
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
             mask = mask_gen(opt.zero_mask)
-            hint = torch.cat((real_vim * mask, mask, noise.normal_()), 1)
+            hint = torch.cat((real_vim * mask, mask), 1)
 
             # train with fake
             with torch.no_grad():
                 feat_sim = netI(Variable(real_sim)).data
                 real_cim = real_cim_pooler(Variable(real_cim)).data
-                fake_cim = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage).data
-            errD_fake = netD(Variable(fake_cim), Variable(feat_sim), cal_var(Variable(fake_cim)))[0].mean(0).view(1)
+                fake_cim = netG(Variable(real_sim),
+                                Variable(hint),
+                                Variable(noise.normal_(0, 1), requires_grad=False),
+                                Variable(feat_sim),
+                                opt.stage).data
+
+            errD_fake = netD(Variable(fake_cim), Variable(feat_sim))[0].mean(0).view(1)
             errD_fake.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_real = netD(Variable(real_cim), Variable(feat_sim), cal_var(Variable(real_cim)))[0].mean(0).view(1)
+            errD_real = netD(Variable(real_cim), Variable(feat_sim))[0].mean(0).view(1)
             errD = errD_real - errD_fake
 
             errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift
@@ -293,9 +297,7 @@ for epoch in range(opt.niter):
                 mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(8)],
                                   0).cuda()
                 mask = torch.cat([mask1, mask2], 0)
-                hint = torch.cat(
-                    (real_vim * mask, mask,
-                     torch.Tensor(16, 1, opt.imageSize // 4, opt.imageSize // 4).normal_().cuda()), 1)
+                hint = torch.cat((real_vim * mask, mask), 1)  ##################################################
                 with torch.no_grad():
                     feat_sim = netI(Variable(real_sim)).data
 
@@ -308,6 +310,7 @@ for epoch in range(opt.niter):
                                   '%s/blur_samples' % opt.outf + '.png')
                 fixed_sketch.resize_as_(real_sim).copy_(real_sim)
                 fixed_hint.resize_as_(hint).copy_(hint)
+                fixed_noise = torch.Tensor(16, opt.ngf, 1, 1).normal_(0, 1).cuda()
                 fixed_sketch_feat.resize_as_(feat_sim).copy_(feat_sim)
 
                 flag -= 1
@@ -326,20 +329,24 @@ for epoch in range(opt.niter):
                 real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
             mask = mask_gen(opt.zero_mask)
-            hint = torch.cat((real_vim * mask, mask, noise.normal_()), 1)
+            hint = torch.cat((real_vim * mask, mask), 1)
 
             with torch.no_grad():
                 feat_sim = netI(Variable(real_sim)).data
                 real_cim = real_cim_pooler(Variable(real_cim)).data
 
-            fake = netG(Variable(real_sim), Variable(hint), Variable(feat_sim), opt.stage)
+            fake = netG(Variable(real_sim),
+                        Variable(hint),
+                        Variable(noise.normal_(0, 1), requires_grad=False),
+                        Variable(feat_sim),
+                        opt.stage)
 
             if gen_iterations < opt.baseGeni:
                 contentLoss = criterion_MSE(netF(fake), netF(Variable(real_cim)))
                 contentLoss.backward()
             else:
                 if opt.zero_mask:
-                    errd = netD(fake, Variable(feat_sim), cal_var(fake))
+                    errd = netD(fake, Variable(feat_sim))
                     errG = (errd * zero_mask_advW).mean(0).view(1)
                     errG.backward(mone, retain_graph=True)
                     feat1 = netF(fake)
@@ -349,8 +356,11 @@ for epoch in range(opt.niter):
                     contentLoss1 = criterion_MSE(feat1[:opt.batchSize // 2], feat2[:opt.batchSize // 2])
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
-                    contentLoss.backward()
+                    varLoss = cal_var_loss(fake)
+                    Loss = varLoss + contentLoss
+                    Loss.backward()
                 else:
+                    # ignore this part
                     errd = netD(fake, Variable(feat_sim), cal_var(fake))
                     errG = errd.mean(0).view(1) * opt.advW
                     errG.backward(mone, retain_graph=True)
@@ -371,6 +381,7 @@ for epoch in range(opt.niter):
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
+            writer.add_scalar('var Loss', varLoss.data[0], gen_iterations)
             writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
             writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
             writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
@@ -382,7 +393,11 @@ for epoch in range(opt.niter):
 
         if gen_iterations % 500 == 0:
             with torch.no_grad():
-                fake = netG(Variable(fixed_sketch), Variable(fixed_hint), Variable(fixed_sketch_feat), opt.stage)
+                fake = netG(Variable(fixed_sketch),
+                            Variable(fixed_hint),
+                            Variable(fixed_noise, require_grad=False),
+                            Variable(fixed_sketch_feat),
+                            opt.stage)
             writer.add_image('colored imgs', vutils.make_grid(fake.data.mul(0.5).add(0.5), nrow=4),
                              gen_iterations)
 

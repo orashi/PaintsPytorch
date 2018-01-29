@@ -50,7 +50,7 @@ class def_netG(nn.Module):
                                  nn.LeakyReLU(0.2, True))
         self.to2 = nn.Sequential(nn.Conv2d(ngf, ngf * 2, kernel_size=4, stride=2, padding=1),  # 128
                                  nn.LeakyReLU(0.2, True))
-        self.to3 = nn.Sequential(nn.Conv2d(ngf * 3, ngf * 4, kernel_size=4, stride=2, padding=1),  # 64
+        self.to3 = nn.Sequential(nn.Conv2d(ngf * 4, ngf * 4, kernel_size=4, stride=2, padding=1),  # 64
                                  nn.LeakyReLU(0.2, True))
         self.to4 = nn.Sequential(nn.Conv2d(ngf * 4, ngf * 8, kernel_size=4, stride=2, padding=1),  # 32
                                  nn.LeakyReLU(0.2, True))
@@ -121,8 +121,9 @@ class def_netG(nn.Module):
         self.exit1 = nn.Conv2d(ngf, 3, kernel_size=3, stride=1, padding=1)
         self.exit2 = nn.Conv2d(ngf * 2, 3, kernel_size=3, stride=1, padding=1)
 
-    def forward(self, sketch, hint, sketch_feat, stage):
-        v = self.toH(hint)
+    def forward(self, sketch, hint, noise, sketch_feat, stage):
+        hint = self.toH(hint)
+        v = torch.cat([hint, noise.expand_as(hint)], 1)
 
         x0 = self.to0(sketch)
         x1 = self.to1(x0)
@@ -152,7 +153,11 @@ class def_netG(nn.Module):
 def cal_var(color):
     color_s = color[4:]
     mean_sat_data = color_s.mean(0)
-    return (color_s.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean().expand(8, 1, 4, 4)
+    return (color_s.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean()
+
+
+def cal_var_loss(fake):
+    return F.relu(cal_var(fake[:4].detach()) - cal_var(fake[4:]))
 
 
 class def_netD512(nn.Module):
@@ -188,21 +193,17 @@ class def_netD512(nn.Module):
                                    ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 8
                                    ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
                                    ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1, stride=2),  # 4
-                                   ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1)
-                                   )
-
-        self.feed3 = nn.Sequential(nn.Conv2d(ndf * 8 + 1, ndf * 8, kernel_size=4, stride=1, padding=0, bias=False),  # 1
+                                   ResNeXtBottleneck(ndf * 8, ndf * 8, cardinality=8, dilate=1),
+                                   nn.Conv2d(ndf * 8, ndf * 8, kernel_size=4, stride=1, padding=0, bias=False),  # 1
                                    nn.LeakyReLU(0.2, True)
                                    )
 
         self.out = nn.Linear(512, 1)
 
-    def forward(self, color, sketch_feat, variance):
+    def forward(self, color, sketch_feat):
         x = self.feed(color)
 
         x = self.feed2(torch.cat([x, sketch_feat], 1))
-
-        x = self.feed3(torch.cat([x, variance], dim=1))
 
         return self.out(x.view(color.size(0), -1))
 
