@@ -11,9 +11,9 @@ import torchvision.models as M
 
 VGG16_PATH = 'vgg16-397923af.pth'
 I2V_PATH = 'i2v.pth'
-UV_MATRIX = torch.FloatTensor([[-0.168935, 0.499813],
+UV_MATRIX = Variable(torch.FloatTensor([[-0.168935, 0.499813],
                                [-0.331665, -0.418531],
-                               [0.50059, -0.081282]])
+                               [0.50059, -0.081282]])).cuda()
 
 
 class ResNeXtBottleneck(nn.Module):

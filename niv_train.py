@@ -357,11 +357,11 @@ for epoch in range(opt.niter):
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
                     varLoss = cal_var_loss(fake, Variable(real_cim))
-                    Loss = F.relu(varLoss) + contentLoss
+                    Loss = varLoss.abs() + contentLoss
                     Loss.backward()
                 else:
                     # ignore this part
-                    errd = netD(fake, Variable(feat_sim), cadamnl_var(fake))
+                    errd = netD(fake, Variable(feat_sim), cal_var(fake))
                     errG = errd.mean(0).view(1) * opt.advW
                     errG.backward(mone, retain_graph=True)
                     feat1 = netF(fake)
