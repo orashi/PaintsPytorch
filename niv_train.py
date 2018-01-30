@@ -44,6 +44,7 @@ parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.0001, help='adversarial weight, default=0.0001')
 parser.add_argument('--advW2', type=float, default=0.0001, help='adversarial weight, default=0.0001')
 parser.add_argument('--contW', type=float, default=1, help='relative contents weight, default=1')
+parser.add_argument('--varW', type=float, default=1, help='relative var weight, default=1')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein lip constraint')
 parser.add_argument('--stage', type=int, required=True, help='training stage')
@@ -357,7 +358,7 @@ for epoch in range(opt.niter):
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
                     varLoss = cal_var_loss(fake, Variable(real_cim))
-                    Loss = varLoss.abs() + contentLoss
+                    Loss = varLoss.abs() * opt.varW + contentLoss
                     Loss.backward()
                 else:
                     # ignore this part
