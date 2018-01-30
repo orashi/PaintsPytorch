@@ -11,6 +11,9 @@ import torchvision.models as M
 
 VGG16_PATH = 'vgg16-397923af.pth'
 I2V_PATH = 'i2v.pth'
+UV_MATRIX = torch.FloatTensor([[-0.168935, 0.499813],
+                               [-0.331665, -0.418531],
+                               [0.50059, -0.081282]])
 
 
 class ResNeXtBottleneck(nn.Module):
@@ -151,12 +154,14 @@ class def_netG(nn.Module):
 
 
 def cal_var(color):
-    mean_sat_data = color.mean(0)
-    return (color.view(4, -1) - torch.stack([mean_sat_data] * 4).view(4, -1)).pow(2).mean()
+    color = color.transpose(1, 3).contiguous().view(-1, 3) + 1
+    uv = color @ UV_MATRIX
+    mean_uv = uv.mean(0).view(1, 2)
+    return (uv - mean_uv.expand_as(uv)).pow(2).sum(1).mean()
 
 
-def cal_var_loss(fake):
-    return cal_var(fake[:4].detach()) - cal_var(fake[4:])
+def cal_var_loss(fake, real):
+    return cal_var(real) - cal_var(fake)
 
 
 class def_netD512(nn.Module):

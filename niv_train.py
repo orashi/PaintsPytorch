@@ -356,12 +356,12 @@ for epoch in range(opt.niter):
                     contentLoss1 = criterion_MSE(feat1[:opt.batchSize // 2], feat2[:opt.batchSize // 2])
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
-                    varLoss = cal_var_loss(fake)
+                    varLoss = cal_var_loss(fake, Variable(real_cim))
                     Loss = F.relu(varLoss) + contentLoss
                     Loss.backward()
                 else:
                     # ignore this part
-                    errd = netD(fake, Variable(feat_sim), cal_var(fake))
+                    errd = netD(fake, Variable(feat_sim), cadamnl_var(fake))
                     errG = errd.mean(0).view(1) * opt.advW
                     errG.backward(mone, retain_graph=True)
                     feat1 = netF(fake)
@@ -381,7 +381,7 @@ for epoch in range(opt.niter):
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
-            writer.add_scalar('var Loss', varLoss.data[0], gen_iterations)
+            writer.add_scalar('uv var Loss', varLoss.data[0], gen_iterations)
             writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
             writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
             writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)

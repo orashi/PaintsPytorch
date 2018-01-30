@@ -14,7 +14,7 @@ from PIL import Image
 import math
 import numpy as np
 from models.naive_model import def_netG
-
+from skimage.color import rgb2yuv
 netG = def_netG(ngf=64, norm='instance')
 netG.load_state_dict(torch.load('netG_epoch_240.pth'))
 netG.cuda().eval()
