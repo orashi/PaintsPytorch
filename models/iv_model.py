@@ -12,8 +12,8 @@ import torchvision.models as M
 VGG16_PATH = 'vgg16-397923af.pth'
 I2V_PATH = 'i2v.pth'
 UV_MATRIX = Variable(torch.FloatTensor([[-0.168935, 0.499813],
-                               [-0.331665, -0.418531],
-                               [0.50059, -0.081282]])).cuda()
+                                        [-0.331665, -0.418531],
+                                        [0.50059, -0.081282]])).cuda()
 
 
 class ResNeXtBottleneck(nn.Module):
@@ -161,7 +161,8 @@ def cal_var(color):
 
 
 def cal_var_loss(fake, real):
-    return cal_var(real) - cal_var(fake)
+    a, b = cal_var(fake[4:]), cal_var(real[4:])
+    return F.smooth_l1_loss(a * 100, b * 100) * 0.01, b - a
 
 
 class def_netD512(nn.Module):

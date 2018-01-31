@@ -357,8 +357,8 @@ for epoch in range(opt.niter):
                     contentLoss1 = criterion_MSE(feat1[:opt.batchSize // 2], feat2[:opt.batchSize // 2])
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
-                    varLoss = cal_var_loss(fake, Variable(real_cim))
-                    Loss = varLoss.abs() * opt.varW + contentLoss
+                    vl, varLoss = cal_var_loss(fake, Variable(real_cim))
+                    Loss = vl * opt.varW + contentLoss
                     Loss.backward()
                 else:
                     # ignore this part
