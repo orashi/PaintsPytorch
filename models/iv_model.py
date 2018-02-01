@@ -155,7 +155,7 @@ class def_netG(nn.Module):
 
 def cal_var(color):
     color = color.transpose(1, 3).contiguous().view(-1, 3) + 1
-    uv = color @ UV_MATRIX
+    uv = color @ UV_MATRIX # @ affine
     mean_uv = uv.mean(0).view(1, 2)
     return (uv - mean_uv.expand_as(uv)).pow(2).sum(1).mean()
 

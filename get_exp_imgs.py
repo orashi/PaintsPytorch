@@ -54,7 +54,6 @@ cudnn.benchmark = True
 dataloader = CreateDataLoader(opt)
 
 netG = torch.nn.DataParallel(def_netG(ngf=opt.ngf))
-netG.module.toH = nn.Sequential(nn.Conv2d(5, opt.ngf, kernel_size=7, stride=1, padding=3), nn.LeakyReLU(0.2, True))
 if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
 
@@ -121,18 +120,21 @@ mask1 = torch.cat(
 mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(8)],
                   0).cuda()
 mask = torch.cat([mask1, mask2], 0)
-hint = torch.cat(
-    (real_vim * mask, mask,
-     torch.Tensor(16, 1, opt.imageSize // 4, opt.imageSize // 4).normal_().cuda()), 1)
+hint = torch.cat((real_vim * mask, mask), 1)
 with torch.no_grad():
     feat_sim = netI(Variable(real_sim)).data
 
 fixed_sketch.resize_as_(real_sim).copy_(real_sim)
 fixed_hint.resize_as_(hint).copy_(hint)
 fixed_sketch_feat.resize_as_(feat_sim).copy_(feat_sim)
+fixed_noise = torch.Tensor(16, opt.ngf, 1, 1).normal_(0, 1).cuda()
 
 with torch.no_grad():
-    fake = netG(Variable(fixed_sketch), Variable(fixed_hint), Variable(fixed_sketch_feat), opt.stage)
+    fake = netG(Variable(fixed_sketch),
+                Variable(fixed_hint),
+                Variable(fixed_noise, requires_grad=False),
+                Variable(fixed_sketch_feat),
+                opt.stage)
 
 vutils.save_image(real_cim.mul(0.5).add(0.5),
                   '%s/color_samples' % opt.outf + '.png')
