@@ -37,7 +37,7 @@ print(opt)
 ####### regular set up
 if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
-gen_iterations = opt.geni
+
 try:
     os.makedirs(opt.outf)
 except OSError:
@@ -68,7 +68,6 @@ L2_dist = nn.PairwiseDistance(2)
 one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
-zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(opt.batchSize, 1)
 noise = torch.Tensor(opt.batchSize, 1, opt.imageSize // 4, opt.imageSize // 4)
 
 fixed_sketch = torch.FloatTensor()
@@ -82,22 +81,7 @@ if opt.cuda:
     criterion_L1 = criterion_L1.cuda()
     criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
-    zero_mask_advW = Variable(zero_mask_advW.cuda())
     noise = noise.cuda()
-
-
-def mask_gen(zero_mask):
-    if zero_mask:
-        mask1 = torch.cat(
-            [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize // 2)],
-            0).cuda()
-        mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
-                          0).cuda()
-        mask = torch.cat([mask1, mask2], 0)
-    else:
-        mask = torch.cat([torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize)],
-                         0).cuda()
-    return mask
 
 
 flag = 1
@@ -115,9 +99,9 @@ if opt.cuda:
     real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
 
 mask1 = torch.cat(
-    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(8)],
+    [torch.rand(1, 1, maskS, maskS).ge(X.rvs(1)[0]).float() for _ in range(opt.batchSize // 2)],
     0).cuda()
-mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(8)],
+mask2 = torch.cat([torch.zeros(1, 1, maskS, maskS).float() for _ in range(opt.batchSize // 2)],
                   0).cuda()
 mask = torch.cat([mask1, mask2], 0)
 hint = torch.cat((real_vim * mask, mask), 1)
@@ -127,7 +111,7 @@ with torch.no_grad():
 fixed_sketch.resize_as_(real_sim).copy_(real_sim)
 fixed_hint.resize_as_(hint).copy_(hint)
 fixed_sketch_feat.resize_as_(feat_sim).copy_(feat_sim)
-fixed_noise = torch.Tensor(16, opt.ngf, 1, 1).normal_(0, 1).cuda()
+fixed_noise = torch.Tensor(opt.batchSize, opt.ngf, 1, 1).normal_(0, 1).cuda()
 
 with torch.no_grad():
     fake = netG(Variable(fixed_sketch),
@@ -142,4 +126,4 @@ vutils.save_image(fake.data.mul(0.5).add(0.5),
                   '%s/colored_samples' % opt.outf + '.png')
 
 np.save('%s/color_samples' % opt.outf, real_cim.cpu().numpy())
-np.save('%s/color_samples' % opt.outf, fake.data.cpu().numpy())
+np.save('%s/colored_samples' % opt.outf, fake.data.cpu().numpy())
