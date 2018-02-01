@@ -155,8 +155,11 @@ class def_netG(nn.Module):
 
 def cal_var(color):
     color = color.transpose(1, 3).contiguous().view(-1, 3) + 1
-    uv = color @ UV_MATRIX # @ affine
-    mean_uv = uv.mean(0).view(1, 2)
+
+    x = np.random.random()
+    rotate = torch.FloatTensor(np.array([[np.cos(2 * np.pi * x)], [np.sin(2 * np.pi * x)]]))
+    uv = color @ UV_MATRIX @ rotate
+    mean_uv = uv.mean(0).view(1, 1)
     return (uv - mean_uv.expand_as(uv)).pow(2).sum(1).mean()
 
 

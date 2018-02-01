@@ -92,8 +92,7 @@ X = stats.truncnorm(
     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 
 data_iter = iter(dataloader)
-data = zip(*[data_iter.next() for _ in range(16 // opt.batchSize)])
-real_cim, real_vim, real_sim = [torch.cat(dat, 0) for dat in data]
+real_cim, real_vim, real_sim = data_iter.next()
 
 if opt.cuda:
     real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
