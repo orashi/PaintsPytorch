@@ -1,17 +1,16 @@
 import argparse
-import os
 import itertools
 import random
-from math import log10
+
 import scipy.stats as stats
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
-import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
-from torch.autograd import Variable, grad
-from models.iv_model import *
+from torch.autograd import grad
+
 from data.proData import CreateDataLoader
+from models.iv_model import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--datarootC', required=True, help='path to colored dataset')

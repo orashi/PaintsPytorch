@@ -1,13 +1,9 @@
 import numpy as np
 import torch
-import os
-import sys
-import functools
 import torch.nn as nn
-from torch.autograd import Variable
-from torch.nn import init
 import torch.nn.functional as F
 import torchvision.models as M
+from torch.autograd import Variable
 
 VGG16_PATH = 'vgg16-397923af.pth'
 I2V_PATH = 'i2v.pth'
