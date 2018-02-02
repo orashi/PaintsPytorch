@@ -165,7 +165,7 @@ def cal_var(color):
 
 
 def cal_var_loss(fake, real):
-    a, i_a, b, i_b = cal_var(fake[4:]), cal_var(real[4:])
+    (a, i_a), (b, i_b) = cal_var(fake), cal_var(real)
     return F.smooth_l1_loss((a + i_a) * 100, (b + i_b) * 100) * 0.01, b - a, i_b - i_a, b - a + i_b - i_a
 
 
