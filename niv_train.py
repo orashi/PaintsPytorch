@@ -356,7 +356,7 @@ for epoch in range(opt.niter):
                     contentLoss1 = criterion_MSE(feat1[:opt.batchSize // 2], feat2[:opt.batchSize // 2])
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
-                    vl, varLoss = cal_var_loss(fake, Variable(real_cim))
+                    vl, varLoss, ivarLoss, total_varLoss = cal_var_loss(fake, Variable(real_cim))
                     Loss = vl * opt.varW + contentLoss
                     Loss.backward()
                 else:
@@ -382,6 +382,8 @@ for epoch in range(opt.niter):
         else:
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
             writer.add_scalar('uv var Loss', varLoss.data[0], gen_iterations)
+            writer.add_scalar('uv ivar Loss', ivarLoss.data[0], gen_iterations)
+            writer.add_scalar('uv total var Loss', total_varLoss.data[0], gen_iterations)
             writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
             writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
             writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)

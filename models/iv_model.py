@@ -150,18 +150,23 @@ class def_netG(nn.Module):
 
 
 def cal_var(color):
+    size = color.size()
+
     color = color.transpose(1, 3).contiguous().view(-1, 3) + 1
 
     x = np.random.random()
     rotate = Variable(torch.FloatTensor(np.array([[np.cos(2 * np.pi * x)], [np.sin(2 * np.pi * x)]]))).cuda()
     uv = color @ UV_MATRIX @ rotate
     mean_uv = uv.mean(0).view(1, 1)
-    return (uv - mean_uv.expand_as(uv)).pow(2).sum(1).mean()
+
+    imean_uv = uv.view(size[0], 512, 512, 1).view(size[0], -1).mean(1).view(size[0], 1)
+    return (uv - mean_uv.expand_as(uv)).pow(2).sum(1).mean(), (imean_uv - mean_uv.expand_as(imean_uv)).pow(2).sum(
+        1).mean()
 
 
 def cal_var_loss(fake, real):
-    a, b = cal_var(fake[4:]), cal_var(real[4:])
-    return F.smooth_l1_loss(a * 100, b * 100) * 0.01, b - a
+    a, i_a, b, i_b = cal_var(fake[4:]), cal_var(real[4:])
+    return F.smooth_l1_loss((a + i_a) * 100, (b + i_b) * 100) * 0.01, b - a, i_b - i_a, b - a + i_b - i_a
 
 
 class def_netD512(nn.Module):
