@@ -47,7 +47,7 @@ parser.add_argument('--contW', type=float, default=1, help='relative contents we
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein lip constraint')
 parser.add_argument('--stage', type=int, required=True, help='training stage')
-parser.add_argument('--NoBCE', action='store_true', required=True, help='no_bce')
+parser.add_argument('--NoBCE', action='store_true', help='no_bce')
 parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
 
 opt = parser.parse_args()
@@ -393,7 +393,7 @@ for epoch in range(opt.niter):
             print('[%d/%d][%d/%d][%d] content %f '
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
-            tmp = F.sigmoid(herrD_fake)
+            tmp = F.sigmoid(herrD_fake.data)
             hint_rate, nhint_rate = tmp[:half_batch].mean(), 1 - tmp[half_batch:].mean()
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
             writer.add_scalar('uv var Loss', varLoss.data[0], gen_iterations)
