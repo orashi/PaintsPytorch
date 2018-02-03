@@ -102,8 +102,8 @@ mone = one * -1
 half_batch = opt.batchSize // 2
 zero_mask_advW = torch.FloatTensor([opt.advW] * half_batch + [opt.advW2] * half_batch).view(opt.batchSize, 1)
 noise = torch.Tensor(opt.batchSize, opt.ngf, 1, 1)
-labelH = torch.FloatTensor([1] * opt.batchSize).view(opt.batchSize, 1)
-labelNH = torch.FloatTensor([1] * half_batch + [0] * half_batch).view(opt.batchSize, 1)
+labelH = torch.FloatTensor([1] * opt.batchSize)
+labelNH = torch.FloatTensor([1] * half_batch + [0] * half_batch)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
@@ -118,7 +118,7 @@ if opt.cuda:
     criterion_L1 = criterion_L1.cuda()
     criterion_MSE = criterion_MSE.cuda()
     one, mone = one.cuda(), mone.cuda()
-    labelH, labelNH = labelH.cuda(), labelNH.cuda()
+    labelH, labelNH = Variable(labelH.cuda()), Variable(labelNH.cuda())
     zero_mask_advW = Variable(zero_mask_advW.cuda())
     noise = noise.cuda()
 
@@ -355,7 +355,7 @@ for epoch in range(opt.niter):
             else:
                 if opt.zero_mask:
                     errd, _ = netD(fake, Variable(feat_sim))
-                    errG = (errd * zero_mask_advW).mean(0).view(1)
+                    errG = (errd * zero_mask_advW).mean().view(1)
                     errG.backward(mone, retain_graph=True)
                     feat1 = netF(fake)
                     with torch.no_grad():
@@ -370,7 +370,7 @@ for epoch in range(opt.niter):
                 else:
                     # ignore this part
                     errd, _ = netD(fake, Variable(feat_sim), cal_var(fake))
-                    errG = errd.mean(0).view(1) * opt.advW
+                    errG = errd.mean().view(1) * opt.advW
                     errG.backward(mone, retain_graph=True)
                     feat1 = netF(fake)
                     with torch.no_grad():
