@@ -44,7 +44,6 @@ parser.add_argument('--env', type=str, default=None, help='tensorboard env')
 parser.add_argument('--advW', type=float, default=0.0001, help='adversarial weight, default=0.0001')
 parser.add_argument('--advW2', type=float, default=0.0001, help='adversarial weight, default=0.0001')
 parser.add_argument('--contW', type=float, default=1, help='relative contents weight, default=1')
-parser.add_argument('--varW', type=float, default=1, help='relative var weight, default=1')
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein lip constraint')
 parser.add_argument('--stage', type=int, required=True, help='training stage')
@@ -117,6 +116,7 @@ if opt.cuda:
     fixed_sketch, fixed_hint, fixed_sketch_feat = fixed_sketch.cuda(), fixed_hint.cuda(), fixed_sketch_feat.cuda()
     criterion_L1 = criterion_L1.cuda()
     criterion_MSE = criterion_MSE.cuda()
+    criterion_BCE = criterion_BCE.cuda()
     one, mone = one.cuda(), mone.cuda()
     labelH, labelNH = Variable(labelH.cuda()), Variable(labelNH.cuda())
     zero_mask_advW = Variable(zero_mask_advW.cuda())
@@ -273,11 +273,11 @@ for epoch in range(opt.niter):
             ed = errD_fake + criterion_BCE(herrD_fake, labelNH)
             ed.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_real, herrD_real = netD(Variable(real_cim), Variable(feat_sim))
+            errD_real, _ = netD(Variable(real_cim), Variable(feat_sim))
             errD_real = errD_real.mean(0).view(1)
             errD = errD_real - errD_fake
 
-            errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift + criterion_BCE(herrD_fake, labelH)
+            errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift  # + criterion_BCE(herrD_fake, labelH)
             # additional penalty term to keep the scores from drifting too far from zero
 
             errD_realer.backward(one, retain_graph=True)  # backward on score on real
@@ -365,7 +365,7 @@ for epoch in range(opt.niter):
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
                     vl, varLoss, ivarLoss, total_varLoss = cal_var_loss(fake, Variable(real_cim))
-                    Loss = vl * opt.varW + contentLoss
+                    Loss = contentLoss
                     Loss.backward()
                 else:
                     # ignore this part
