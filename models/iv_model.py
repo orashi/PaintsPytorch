@@ -207,14 +207,15 @@ class def_netD512(nn.Module):
                                    nn.LeakyReLU(0.2, True)
                                    )
 
-        self.out = nn.Linear(512, 1)
+        self.out = nn.Linear(512, 2)
 
     def forward(self, color, sketch_feat):
         x = self.feed(color)
 
         x = self.feed2(torch.cat([x, sketch_feat], 1))
 
-        return self.out(x.view(color.size(0), -1))
+        out = self.out(x.view(color.size(0), -1))
+        return out[:, 0], out[:, 1]
 
 
 class def_netD256(nn.Module):
