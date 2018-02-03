@@ -189,7 +189,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch):
         interpolates = interpolates.cuda()
     interpolates = Variable(interpolates, requires_grad=True)
 
-    disc_interpolates, _ = netD(interpolates, Variable(sketch))[0]
+    disc_interpolates, _ = netD(interpolates, Variable(sketch))
 
     gradients = grad(outputs=disc_interpolates, inputs=interpolates,
                      grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
@@ -268,11 +268,13 @@ for epoch in range(opt.niter):
                                 Variable(feat_sim),
                                 opt.stage).data
 
-            errD_fake, herrD_fake = netD(Variable(fake_cim), Variable(feat_sim))[0].mean(0).view(1)
-            errD_fake += criterion_BCE(herrD_fake, labelNH)
-            errD_fake.backward(one, retain_graph=True)  # backward on score on real
+            errD_fake, herrD_fake = netD(Variable(fake_cim), Variable(feat_sim))
+            errD_fake = errD_fake.mean(0).view(1)
+            ed = errD_fake + criterion_BCE(herrD_fake, labelNH)
+            ed.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_real, herrD_real = netD(Variable(real_cim), Variable(feat_sim))[0].mean(0).view(1)
+            errD_real, herrD_real = netD(Variable(real_cim), Variable(feat_sim))
+            errD_real = errD_real.mean(0).view(1)
             errD = errD_real - errD_fake
 
             errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift + criterion_BCE(herrD_fake, labelH)
