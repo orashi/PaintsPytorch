@@ -47,6 +47,7 @@ parser.add_argument('--contW', type=float, default=1, help='relative contents we
 parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
 parser.add_argument('--gamma', type=float, default=1, help='wasserstein lip constraint')
 parser.add_argument('--stage', type=int, required=True, help='training stage')
+parser.add_argument('--NoBCE', action='store_true', required=True, help='no_bce')
 parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
 
 opt = parser.parse_args()
@@ -270,7 +271,11 @@ for epoch in range(opt.niter):
 
             errD_fake, herrD_fake = netD(Variable(fake_cim), Variable(feat_sim))
             errD_fake = errD_fake.mean(0).view(1)
-            ed = errD_fake + criterion_BCE(herrD_fake, labelNH)
+            if opt.NoBCE:
+                ed = errD_fake
+            else:
+                ed = errD_fake + criterion_BCE(herrD_fake, labelNH)
+
             ed.backward(one, retain_graph=True)  # backward on score on real
 
             errD_real, _ = netD(Variable(real_cim), Variable(feat_sim))
