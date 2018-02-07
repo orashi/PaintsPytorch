@@ -1,13 +1,15 @@
 from __future__ import division
+
+import math
+import numbers
 import os
 import os.path
-import torchvision.transforms as transforms
-import torch.utils.data as data
 import random
-import math
-from PIL import Image, ImageOps
+
+import torch.utils.data as data
+import torchvision.transforms as transforms
+from PIL import Image
 from torchvision.transforms import Scale, CenterCrop
-import numbers
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -127,10 +129,6 @@ class ImageFolder(data.Dataset):
         Cimg, Simg = RandomCrop(511)(Cimg, Simg)
         if random.random() < 0.5:
             Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
-        if random.random() < 0.5:
-            Cimg, Simg = Cimg.transpose(Image.FLIP_TOP_BOTTOM), Simg.transpose(Image.FLIP_TOP_BOTTOM)
-        if random.random() < 0.5:
-            Cimg, Simg = Cimg.transpose(Image.ROTATE_90), Simg.transpose(Image.ROTATE_90)
 
         Cimg, Vimg, Simg = self.transform(Cimg), self.vtransform(Cimg), self.stransform(Simg)
 
