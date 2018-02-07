@@ -20,7 +20,7 @@ def detach_Y(rgb):
     yuv = sat_data @ YUV_MATRIX  # convert space
     yuv = torch.cat([yuv[:, 0].unsqueeze(1).detach(), yuv[:, 1:]], 1)  # detach
     rgb = yuv @ IYUV_MATRIX  # to rgb
-    return rgb.view(size[0], size[3], size[2], size[1]).transpose(1, 3).contiguous()
+    return rgb.view(size[0], size[3], size[2], size[1]).transpose(1, 3).contiguous() - 1
 
 
 def cal_var(color):
