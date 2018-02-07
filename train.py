@@ -329,7 +329,7 @@ for epoch in range(opt.niter):
         torch.save(netG.state_dict(), '%s/netG_epoch_only.pth' % opt.outf)
         torch.save(netD.state_dict(), '%s/netD_epoch_only.pth' % opt.outf)
     elif epoch % opt.cut == 0:
-        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, epoch))
-        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, epoch))
+        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, epoch + opt.epoi))
+        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, epoch + opt.epoi))
     torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
     torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
