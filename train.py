@@ -86,6 +86,7 @@ netI = torch.nn.DataParallel(NetI())
 print(netI)
 
 criterion_MSE = nn.MSELoss()
+criterion_L1 = nn.L1Loss()
 one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
@@ -101,6 +102,7 @@ if opt.cuda:
     netI = netI.cuda().eval()
     fixed_sketch, fixed_hint, fixed_sketch_feat = fixed_sketch.cuda(), fixed_hint.cuda(), fixed_sketch_feat.cuda()
     criterion_MSE = criterion_MSE.cuda()
+    criterion_L1 = criterion_L1.cuda()
     one, mone = one.cuda(), mone.cuda()
 
 # setup optimizer
@@ -282,17 +284,14 @@ for epoch in range(opt.niter):
                         Variable(feat_sim))
 
             if gen_iterations < opt.baseGeni:
-                contentLoss = criterion_MSE(netF(detach_Y(fake)), netF(Variable(real_cim)))
+                contentLoss = criterion_L1(detach_Y(fake), Variable(real_cim))
                 contentLoss.backward()
             else:
                 errd = netD(fake, Variable(feat_sim))
                 errG = errd.mean() * opt.advW
                 errG.backward(mone, retain_graph=True)
-                feat1 = netF(detach_Y(fake))
-                with torch.no_grad():
-                    feat2 = netF(Variable(real_cim))
 
-                contentLoss = criterion_MSE(feat1, feat2)
+                contentLoss = criterion_L1(detach_Y(fake), Variable(real_cim))
                 contentLoss.backward()
 
             optimizerG.step()
