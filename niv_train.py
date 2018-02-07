@@ -369,7 +369,7 @@ for epoch in range(opt.niter):
                     contentLoss1 = criterion_MSE(feat1[:opt.batchSize // 2], feat2[:opt.batchSize // 2])
                     contentLoss2 = criterion_MSE(feat1[opt.batchSize // 2:], feat2[opt.batchSize // 2:])
                     contentLoss = (opt.contW * contentLoss1 + contentLoss2) / (opt.contW + 1)
-                    vl, varLoss, ivarLoss, total_varLoss = cal_var_loss(fake, Variable(real_cim))
+                    vl, varLoss, ivarLoss, total_varLoss = cal_var_loss(fake.detach(), Variable(real_cim))
                     Loss = contentLoss
                     Loss.backward()
                 else:
@@ -393,7 +393,7 @@ for epoch in range(opt.niter):
             print('[%d/%d][%d/%d][%d] content %f '
                   % (epoch, opt.niter, i, len(dataloader), gen_iterations, contentLoss.data[0]))
         else:
-            tmp = F.sigmoid(herrD_fake.data)
+            tmp = F.sigmoid(herrD_fake.detach())
             hint_rate, nhint_rate = tmp[:half_batch].mean(), 1 - tmp[half_batch:].mean()
             writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
             writer.add_scalar('uv var Loss', varLoss.data[0], gen_iterations)
