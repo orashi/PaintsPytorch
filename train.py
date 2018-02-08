@@ -11,6 +11,7 @@ from torch.autograd import grad
 
 from data.proData import CreateDataLoader
 from models.old_standard import *
+from utils.loss import tv_loss
 from utils.uv import get_UV
 
 parser = argparse.ArgumentParser()
@@ -291,7 +292,8 @@ for epoch in range(opt.niter):
                 errG = errd.mean() * opt.advW
                 errG.backward(mone, retain_graph=True)
 
-                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 100
+                tv_dist = tv_loss(fake, Variable(real_cim))  # tv loss
+                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 100 + tv_dist
                 contentLoss.backward()
 
             optimizerG.step()
@@ -308,6 +310,7 @@ for epoch in range(opt.niter):
             writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
             writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
             writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
+            writer.add_scalar('tv_dist', tv_dist.data[0], gen_iterations)
             writer.add_scalar('Gnet loss toward real', errG.data[0], gen_iterations)
             writer.add_scalar('gradient_penalty', gradient_penalty.data[0], gen_iterations)
             print('[%d/%d][%d/%d][%d] errD: %f err_G: %f err_D_real: %f err_D_fake %f content loss %f'
