@@ -106,7 +106,7 @@ class NetG(nn.Module):
                                      nn.LeakyReLU(0.2, True)
                                      )
 
-        self.exit = nn.Conv2d(ngf, 3, kernel_size=3, stride=1, padding=1)
+        self.exit = nn.Conv2d(ngf // 2, 3, kernel_size=3, stride=1, padding=1)
 
     def forward(self, sketch, hint, sketch_feat):
         hint = self.toH(hint)
@@ -121,7 +121,7 @@ class NetG(nn.Module):
         x = self.tunnel3(torch.cat([x, x3], 1))
         x = self.tunnel2(torch.cat([x, x2], 1))
         x = self.tunnel1(torch.cat([x, x1], 1))
-        x = F.tanh(self.exit(torch.cat([x, x0], 1)))
+        x = F.tanh(self.exit(x + x0))
 
         return x
 

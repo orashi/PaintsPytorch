@@ -284,14 +284,14 @@ for epoch in range(opt.niter):
                         Variable(feat_sim))
 
             if gen_iterations < opt.baseGeni:
-                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 10
+                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 100
                 contentLoss.backward()
             else:
                 errd = netD(fake, Variable(feat_sim))
                 errG = errd.mean() * opt.advW
                 errG.backward(mone, retain_graph=True)
 
-                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 10
+                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 100
                 contentLoss.backward()
 
             optimizerG.step()
