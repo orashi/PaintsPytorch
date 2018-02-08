@@ -23,6 +23,14 @@ def detach_Y(rgb):
     return rgb.view(size[0], size[3], size[2], size[1]).transpose(1, 3).contiguous() - 1
 
 
+def get_UV(rgb):
+    size = rgb.size()  # record size
+    sat_data = rgb.transpose(1, 3).contiguous().view(-1, 3) + 1  # move channel to last
+    uv = sat_data @ UV_MATRIX  # convert space
+
+    return uv.view(size[0], size[3], size[2], 2).transpose(1, 3).contiguous()
+
+
 def cal_var(color):
     size = color.size()
 

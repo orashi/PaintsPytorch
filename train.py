@@ -11,7 +11,7 @@ from torch.autograd import grad
 
 from data.proData import CreateDataLoader
 from models.standard import *
-from utils.uv import detach_Y
+from utils.uv import get_UV
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--datarootC', required=True, help='path to colored dataset')
@@ -284,14 +284,14 @@ for epoch in range(opt.niter):
                         Variable(feat_sim))
 
             if gen_iterations < opt.baseGeni:
-                contentLoss = criterion_L1(detach_Y(fake), Variable(real_cim))
+                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 10
                 contentLoss.backward()
             else:
                 errd = netD(fake, Variable(feat_sim))
                 errG = errd.mean() * opt.advW
                 errG.backward(mone, retain_graph=True)
 
-                contentLoss = criterion_L1(detach_Y(fake), Variable(real_cim))
+                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 10
                 contentLoss.backward()
 
             optimizerG.step()
