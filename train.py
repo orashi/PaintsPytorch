@@ -10,7 +10,7 @@ from tensorboardX import SummaryWriter
 from torch.autograd import grad
 
 from data.proData import CreateDataLoader
-from models.standard import *
+from models.old_standard import *
 from utils.uv import get_UV
 
 parser = argparse.ArgumentParser()
