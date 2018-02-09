@@ -293,7 +293,7 @@ for epoch in range(opt.niter):
                 errG.backward(mone, retain_graph=True)
 
                 tv_dist = tv_loss(fake, Variable(real_cim))  # tv loss
-                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 100 + tv_dist
+                contentLoss = criterion_MSE(get_UV(fake), get_UV(Variable(real_cim))) * 100
                 contentLoss.backward()
 
             optimizerG.step()
