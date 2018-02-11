@@ -162,7 +162,7 @@ class NetD(nn.Module):
                                    nn.LeakyReLU(0.2, True)
                                    )
 
-        self.out = nn.Linear(512, 1)
+        self.out = nn.Linear(512, 2)
 
     def forward(self, color, sketch_feat):
         x = self.feed(color)
@@ -170,7 +170,7 @@ class NetD(nn.Module):
         x = self.feed2(torch.cat([x, sketch_feat], 1))
 
         out = self.out(x.view(color.size(0), -1))
-        return out
+        return out[:, 0], out[:, 1]
 
 
 class NetF(nn.Module):
