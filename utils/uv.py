@@ -49,3 +49,10 @@ def cal_var(color):
 def cal_var_loss(fake, real):
     (a, i_a), (b, i_b) = cal_var(fake), cal_var(real)
     return F.smooth_l1_loss((a + i_a) * 100, (b + i_b) * 100) * 0.01, b - a, i_b - i_a, b - a + i_b - i_a
+
+
+def cal_tvar(color):
+    uv = color @ UV_MATRIX
+    mean_uv = uv.mean(0).view(1, 2)
+
+    return (uv - mean_uv.expand_as(uv)).pow(2).sum(1).mean()
