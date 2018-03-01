@@ -58,6 +58,7 @@ if opt.cuda:
     torch.cuda.manual_seed(opt.manualSeed)
 cudnn.benchmark = True
 ####### regular set up end
+
 writer = SummaryWriter(log_dir=opt.env, comment='this is great')
 
 dataloader = CreateDataLoader(opt)
@@ -82,9 +83,12 @@ netI = torch.nn.DataParallel(NetI())
 print(netI)
 
 criterion_MSE = nn.MSELoss()
+criterion_BCE = nn.BCEWithLogitsLoss()
+
 one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
+labelNH = torch.FloatTensor([1] * half_batch + [0] * half_batch)
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
@@ -97,7 +101,9 @@ if opt.cuda:
     netI = netI.cuda().eval()
     fixed_sketch, fixed_hint, fixed_sketch_feat = fixed_sketch.cuda(), fixed_hint.cuda(), fixed_sketch_feat.cuda()
     criterion_MSE = criterion_MSE.cuda()
+    criterion_BCE = criterion_BCE.cuda()
     one, mone = one.cuda(), mone.cuda()
+    labelNH = Variable(labelNH.cuda())
 
 # setup optimizer
 
@@ -123,7 +129,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, sketch_feat):
         interpolates = interpolates.cuda()
     interpolates = Variable(interpolates, requires_grad=True)
 
-    disc_interpolates = netD(interpolates, Variable(sketch_feat))
+    disc_interpolates, _ = netD(interpolates, Variable(sketch_feat))
 
     gradients = grad(outputs=disc_interpolates, inputs=interpolates,
                      grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
@@ -196,12 +202,12 @@ for epoch in range(opt.niter):
                                 Variable(feat_sim)
                                 ).data
 
-            errD_fake = netD(Variable(fake_cim), Variable(feat_sim))
+            errD_fake, herrD_fake = netD(Variable(fake_cim), Variable(feat_sim))
             errD_fake = errD_fake.mean(0).view(1)
+            ed = errD_fake + criterion_BCE(herrD_fake, labelNH)
+            ed.backward(one, retain_graph=True)  # backward on score on real
 
-            errD_fake.backward(one, retain_graph=True)  # backward on score on real
-
-            errD_real = netD(Variable(real_cim), Variable(feat_sim))
+            errD_real, _ = netD(Variable(real_cim), Variable(feat_sim))
             errD_real = errD_real.mean(0).view(1)
             errD = errD_real - errD_fake
 
@@ -273,7 +279,7 @@ for epoch in range(opt.niter):
                         Variable(hint),
                         Variable(feat_sim))
 
-            errd = netD(fake, Variable(feat_sim))
+            errd, _ = netD(fake, Variable(feat_sim))
             errG = errd.mean() * opt.advW
             errG.backward(mone, retain_graph=True)
             feat1 = netF(fake)
@@ -288,12 +294,17 @@ for epoch in range(opt.niter):
         ############################
         # (3) Report & 100 Batch checkpoint
         ############################
+        tmp = F.sigmoid(herrD_fake.detach())
+        hint_rate, nhint_rate = tmp[:half_batch].mean(), 1 - tmp[half_batch:].mean()
         writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
         writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
         writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
         writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
         writer.add_scalar('Gnet loss toward real', errG.data[0], gen_iterations)
         writer.add_scalar('gradient_penalty', gradient_penalty.data[0], gen_iterations)
+        writer.add_scalar('hint_prob', hint_rate.data[0], gen_iterations)
+        writer.add_scalar('nhint_prob', nhint_rate.data[0], gen_iterations)
+
         print('[%d/%d][%d/%d][%d] errD: %f err_G: %f err_D_real: %f err_D_fake %f content loss %f'
               % (epoch, opt.niter, i, len(dataloader), gen_iterations,
                  errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
