@@ -52,7 +52,7 @@ def cal_var_loss(fake, real):
 
 
 def cal_tvar(color):
-    uv = color @ UV_MATRIX
+    uv = color @ UV_MATRIX.data
     mean_uv = uv.mean(0).view(1, 2)
 
     return (uv - mean_uv.expand_as(uv)).pow(2).sum(1).mean()

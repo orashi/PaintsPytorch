@@ -10,7 +10,7 @@ from tensorboardX import SummaryWriter
 from torch.autograd import grad
 
 from data.final import CreateDataLoader
-from models.standard import *
+from models.standard_intel import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataroot', required=True, help='path to colored dataset')
@@ -298,7 +298,7 @@ for epoch in range(opt.niter):
               % (epoch, opt.niter, i, len(dataloader), gen_iterations,
                  errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
 
-        if gen_iterations % 500 == 666:
+        if gen_iterations % 500 == 0:
             with torch.no_grad():
                 fake = netG(Variable(fixed_sketch),
                             Variable(fixed_hint),
