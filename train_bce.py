@@ -309,7 +309,7 @@ for epoch in range(opt.niter):
               % (epoch, opt.niter, i, len(dataloader), gen_iterations,
                  errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
 
-        if gen_iterations % 500 == 0:
+        if gen_iterations % 500 == 666:
             with torch.no_grad():
                 fake = netG(Variable(fixed_sketch),
                             Variable(fixed_hint),
@@ -326,7 +326,7 @@ for epoch in range(opt.niter):
         torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
         torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
     elif (epoch + opt.epoi) % opt.cut == 0:
-        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, epoch + opt.epoi))
-        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, epoch + opt.epoi))
+        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, gen_iterations))
+        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, gen_iterations))
         torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
         torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)

@@ -7,7 +7,6 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
-from torch.autograd import grad
 
 from data.final import CreateDataLoader
 from models.standard import *
@@ -58,6 +57,7 @@ if opt.cuda:
     torch.cuda.manual_seed(opt.manualSeed)
 cudnn.benchmark = True
 ####### regular set up end
+
 writer = SummaryWriter(log_dir=opt.env, comment='this is great')
 
 dataloader = CreateDataLoader(opt)
@@ -82,9 +82,15 @@ netI = torch.nn.DataParallel(NetI())
 print(netI)
 
 criterion_MSE = nn.MSELoss()
+criterion_BCE = nn.BCEWithLogitsLoss()
+
 one = torch.FloatTensor([1])
 mone = one * -1
 half_batch = opt.batchSize // 2
+
+label = torch.FloatTensor(opt.batchSize)
+real_label = 1
+fake_label = 0
 
 fixed_sketch = torch.FloatTensor()
 fixed_hint = torch.FloatTensor()
@@ -97,7 +103,9 @@ if opt.cuda:
     netI = netI.cuda().eval()
     fixed_sketch, fixed_hint, fixed_sketch_feat = fixed_sketch.cuda(), fixed_hint.cuda(), fixed_sketch_feat.cuda()
     criterion_MSE = criterion_MSE.cuda()
+    criterion_BCE = criterion_BCE.cuda()
     one, mone = one.cuda(), mone.cuda()
+    label = label.cuda()
 
 # setup optimizer
 
@@ -111,29 +119,6 @@ if opt.optim:
         param_group['lr'] = opt.lrG
     for param_group in optimizerD.param_groups:
         param_group['lr'] = opt.lrD
-
-
-def calc_gradient_penalty(netD, real_data, fake_data, sketch_feat):
-    alpha = torch.rand(opt.batchSize, 1, 1, 1)
-    alpha = alpha.cuda() if opt.cuda else alpha
-
-    interpolates = alpha * real_data + ((1 - alpha) * fake_data)
-
-    if opt.cuda:
-        interpolates = interpolates.cuda()
-    interpolates = Variable(interpolates, requires_grad=True)
-
-    disc_interpolates = netD(interpolates, Variable(sketch_feat))
-
-    gradients = grad(outputs=disc_interpolates, inputs=interpolates,
-                     grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
-                         disc_interpolates.size()),
-                     create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-    # TODO:test gradients = gradients.view(gradients.size(0), -1)
-
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * opt.gpW
-    return gradient_penalty
 
 
 def mask_gen():
@@ -187,7 +172,8 @@ for epoch in range(opt.niter):
 
             mask = mask_gen()
             hint = torch.cat((real_vim * mask, mask), 1)
-
+            label.fill_(fake_label)
+            labelv = Variable(label)
             # train with fake
             with torch.no_grad():
                 feat_sim = netI(Variable(real_sim)).data
@@ -197,21 +183,19 @@ for epoch in range(opt.niter):
                                 ).data
 
             errD_fake = netD(Variable(fake_cim), Variable(feat_sim))
-            errD_fake = errD_fake.mean(0).view(1)
 
-            errD_fake.backward(one, retain_graph=True)  # backward on score on real
+            ed = criterion_BCE(errD_fake, labelv)
+            ed.backward(one, retain_graph=True)  # backward on score on real
+
+            label.fill_(real_label)
+            labelv = Variable(label)
 
             errD_real = netD(Variable(real_cim), Variable(feat_sim))
-            errD_real = errD_real.mean(0).view(1)
-            errD = errD_real - errD_fake
+            errD_real = criterion_BCE(errD_real, labelv)
 
-            errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift
             # additional penalty term to keep the scores from drifting too far from zero
 
-            errD_realer.backward(one, retain_graph=True)  # backward on score on real
-
-            gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, feat_sim)
-            gradient_penalty.backward()
+            errD_real.backward(one, retain_graph=True)  # backward on score on real
 
             optimizerD.step()
 
@@ -265,6 +249,8 @@ for epoch in range(opt.niter):
 
             mask = mask_gen()
             hint = torch.cat((real_vim * mask, mask), 1)
+            label.fill_(real_label)
+            labelv = Variable(label)
 
             with torch.no_grad():
                 feat_sim = netI(Variable(real_sim)).data
@@ -274,9 +260,10 @@ for epoch in range(opt.niter):
                         Variable(feat_sim))
 
             errd = netD(fake, Variable(feat_sim))
-            errG = errd.mean() * opt.advW
+            errG = criterion_BCE(errd, labelv)
             errG.backward(mone, retain_graph=True)
             feat1 = netF(fake)
+
             with torch.no_grad():
                 feat2 = netF(Variable(real_cim))
 
@@ -289,14 +276,13 @@ for epoch in range(opt.niter):
         # (3) Report & 100 Batch checkpoint
         ############################
         writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
-        writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
         writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
         writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
         writer.add_scalar('Gnet loss toward real', errG.data[0], gen_iterations)
-        writer.add_scalar('gradient_penalty', gradient_penalty.data[0], gen_iterations)
-        print('[%d/%d][%d/%d][%d] errD: %f err_G: %f err_D_real: %f err_D_fake %f content loss %f'
+
+        print('[%d/%d][%d/%d][%d]  err_G: %f err_D_real: %f err_D_fake %f content loss %f'
               % (epoch, opt.niter, i, len(dataloader), gen_iterations,
-                 errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
+                 errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
 
         if gen_iterations % 500 == 666:
             with torch.no_grad():

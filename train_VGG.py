@@ -7,7 +7,6 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
-from torch.autograd import grad
 
 from data.final import CreateDataLoader
 from models.standard import *
@@ -22,22 +21,16 @@ parser.add_argument('--niter', type=int, default=700, help='number of epochs to 
 parser.add_argument('--ngf', type=int, default=64)
 parser.add_argument('--ndf', type=int, default=64)
 parser.add_argument('--lrG', type=float, default=0.0001, help='learning rate, default=0.0001')
-parser.add_argument('--lrD', type=float, default=0.0001, help='learning rate, default=0.0001')
 parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--netG', default='', help="path to netG (to continue training)")
-parser.add_argument('--netD', default='', help="path to netD (to continue training)")
 parser.add_argument('--optim', action='store_true', help='load optimizer\'s checkpoint')
 parser.add_argument('--outf', default='', help='folder to output images and model checkpoints')
 parser.add_argument('--optf', default='', help='folder to optimizer checkpoints')
-parser.add_argument('--Diters', type=int, default=1, help='number of D iters per each G iter')
 parser.add_argument('--manualSeed', type=int, default=2345, help='random seed to use. Default=1234')
 parser.add_argument('--geni', type=int, default=0, help='continue gen image num')
 parser.add_argument('--epoi', type=int, default=0, help='continue epoch num')
 parser.add_argument('--env', type=str, default=None, help='tensorboard env')
-parser.add_argument('--advW', type=float, default=0.0001, help='adversarial weight, default=0.0001')
-parser.add_argument('--gpW', type=float, default=10, help='gradient penalty weight')
-parser.add_argument('--drift', type=float, default=0.001, help='wasserstein drift weight')
 
 opt = parser.parse_args()
 print(opt)
@@ -68,11 +61,6 @@ if opt.netG != '':
 
 print(netG)
 
-netD = torch.nn.DataParallel(NetD(ndf=opt.ndf))
-if opt.netD != '':
-    netD.load_state_dict(torch.load(opt.netD))
-print(netD)
-
 netF = torch.nn.DataParallel(NetF())
 print(netF)
 for param in netF.parameters():
@@ -91,7 +79,6 @@ fixed_hint = torch.FloatTensor()
 fixed_sketch_feat = torch.FloatTensor()
 
 if opt.cuda:
-    netD = netD.cuda()
     netG = netG.cuda()
     netF = netF.cuda()
     netI = netI.cuda().eval()
@@ -102,38 +89,11 @@ if opt.cuda:
 # setup optimizer
 
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.9))
-optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.9))
 
 if opt.optim:
     optimizerG.load_state_dict(torch.load('%s/optimG_checkpoint.pth' % opt.optf))
-    optimizerD.load_state_dict(torch.load('%s/optimD_checkpoint.pth' % opt.optf))
     for param_group in optimizerG.param_groups:
         param_group['lr'] = opt.lrG
-    for param_group in optimizerD.param_groups:
-        param_group['lr'] = opt.lrD
-
-
-def calc_gradient_penalty(netD, real_data, fake_data, sketch_feat):
-    alpha = torch.rand(opt.batchSize, 1, 1, 1)
-    alpha = alpha.cuda() if opt.cuda else alpha
-
-    interpolates = alpha * real_data + ((1 - alpha) * fake_data)
-
-    if opt.cuda:
-        interpolates = interpolates.cuda()
-    interpolates = Variable(interpolates, requires_grad=True)
-
-    disc_interpolates = netD(interpolates, Variable(sketch_feat))
-
-    gradients = grad(outputs=disc_interpolates, inputs=interpolates,
-                     grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
-                         disc_interpolates.size()),
-                     create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-    # TODO:test gradients = gradients.view(gradients.size(0), -1)
-
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * opt.gpW
-    return gradient_penalty
 
 
 def mask_gen():
@@ -155,66 +115,12 @@ X = stats.truncnorm(
     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 
 for p in netG.parameters():
-    p.requires_grad = False  # to avoid computation
+    p.requires_grad = True
 
 for epoch in range(opt.niter):
     data_iter = iter(dataloader)
     i = 0
     while i < len(dataloader) - 16 // opt.batchSize:
-        ############################
-        # (1) Update D network
-        ###########################
-        for p in netD.parameters():  # reset requires_grad
-            p.requires_grad = True  # they are set to False below in netG update
-        for p in netG.parameters():
-            p.requires_grad = False  # to avoid computation ft_params
-
-        # train the discriminator Diters times
-        Diters = opt.Diters
-        j = 0
-        while j < Diters and i < len(dataloader) - 16 // opt.batchSize:
-
-            j += 1
-            netD.zero_grad()
-
-            data = data_iter.next()
-            real_cim, real_vim, real_sim = data
-            i += 1
-            ###############################
-
-            if opt.cuda:
-                real_cim, real_vim, real_sim = real_cim.cuda(), real_vim.cuda(), real_sim.cuda()
-
-            mask = mask_gen()
-            hint = torch.cat((real_vim * mask, mask), 1)
-
-            # train with fake
-            with torch.no_grad():
-                feat_sim = netI(Variable(real_sim)).data
-                fake_cim = netG(Variable(real_sim),
-                                Variable(hint),
-                                Variable(feat_sim)
-                                ).data
-
-            errD_fake = netD(Variable(fake_cim), Variable(feat_sim))
-            errD_fake = errD_fake.mean(0).view(1)
-
-            errD_fake.backward(one, retain_graph=True)  # backward on score on real
-
-            errD_real = netD(Variable(real_cim), Variable(feat_sim))
-            errD_real = errD_real.mean(0).view(1)
-            errD = errD_real - errD_fake
-
-            errD_realer = -1 * errD_real + errD_real.pow(2) * opt.drift
-            # additional penalty term to keep the scores from drifting too far from zero
-
-            errD_realer.backward(one, retain_graph=True)  # backward on score on real
-
-            gradient_penalty = calc_gradient_penalty(netD, real_cim, fake_cim, feat_sim)
-            gradient_penalty.backward()
-
-            optimizerD.step()
-
         ############################
         # (2) Update G network
         ############################
@@ -250,10 +156,6 @@ for epoch in range(opt.niter):
 
                 flag -= 1
 
-            for p in netD.parameters():
-                p.requires_grad = False  # to avoid computation
-            for p in netG.parameters():
-                p.requires_grad = True
             netG.zero_grad()
 
             data = data_iter.next()
@@ -273,9 +175,6 @@ for epoch in range(opt.niter):
                         Variable(hint),
                         Variable(feat_sim))
 
-            errd = netD(fake, Variable(feat_sim))
-            errG = errd.mean() * opt.advW
-            errG.backward(mone, retain_graph=True)
             feat1 = netF(fake)
             with torch.no_grad():
                 feat2 = netF(Variable(real_cim))
@@ -289,14 +188,9 @@ for epoch in range(opt.niter):
         # (3) Report & 100 Batch checkpoint
         ############################
         writer.add_scalar('VGG MSE Loss', contentLoss.data[0], gen_iterations)
-        writer.add_scalar('wasserstein distance', errD.data[0], gen_iterations)
-        writer.add_scalar('errD_real', errD_real.data[0], gen_iterations)
-        writer.add_scalar('errD_fake', errD_fake.data[0], gen_iterations)
-        writer.add_scalar('Gnet loss toward real', errG.data[0], gen_iterations)
-        writer.add_scalar('gradient_penalty', gradient_penalty.data[0], gen_iterations)
-        print('[%d/%d][%d/%d][%d] errD: %f err_G: %f err_D_real: %f err_D_fake %f content loss %f'
+        print('[%d/%d][%d/%d][%d]  content loss %f'
               % (epoch, opt.niter, i, len(dataloader), gen_iterations,
-                 errD.data[0], errG.data[0], errD_real.data[0], errD_fake.data[0], contentLoss.data[0]))
+                 contentLoss.data[0]))
 
         if gen_iterations % 500 == 666:
             with torch.no_grad():
@@ -311,11 +205,7 @@ for epoch in range(opt.niter):
     # do checkpointing
     if opt.cut == 0:
         torch.save(netG.state_dict(), '%s/netG_epoch_only.pth' % opt.outf)
-        torch.save(netD.state_dict(), '%s/netD_epoch_only.pth' % opt.outf)
         torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
-        torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
     elif (epoch + opt.epoi) % opt.cut == 0:
         torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, gen_iterations))
-        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, gen_iterations))
         torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
-        torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
