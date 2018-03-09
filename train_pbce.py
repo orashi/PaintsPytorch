@@ -184,14 +184,14 @@ for epoch in range(opt.niter):
 
             errD_fake = netD(Variable(fake_cim), Variable(feat_sim))
 
-            ed = criterion_BCE(errD_fake, labelv)
+            ed = criterion_BCE(errD_fake, labelv.view(4, 1))
             ed.backward(one, retain_graph=True)  # backward on score on real
 
             label.fill_(real_label)
             labelv = Variable(label)
 
             errD_real = netD(Variable(real_cim), Variable(feat_sim))
-            errD_real = criterion_BCE(errD_real, labelv)
+            errD_real = criterion_BCE(errD_real, labelv.view(4, 1))
 
             # additional penalty term to keep the scores from drifting too far from zero
 
@@ -260,7 +260,7 @@ for epoch in range(opt.niter):
                         Variable(feat_sim))
 
             errd = netD(fake, Variable(feat_sim))
-            errG = criterion_BCE(errd, labelv)
+            errG = criterion_BCE(errd, labelv.view(4, 1))
             errG.backward(mone, retain_graph=True)
             feat1 = netF(fake)
 
