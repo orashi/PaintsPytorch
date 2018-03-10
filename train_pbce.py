@@ -261,7 +261,8 @@ for epoch in range(opt.niter):
 
             errd = netD(fake, Variable(feat_sim))
             errG = criterion_BCE(errd, labelv.view(4, 1))
-            errG.backward(mone, retain_graph=True)
+            eg = errG * opt.advW
+            eg.backward(mone, retain_graph=True)
             feat1 = netF(fake)
 
             with torch.no_grad():
