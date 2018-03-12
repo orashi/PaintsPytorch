@@ -45,6 +45,6 @@ while i < len(dataloader):
     zhint = torch.zeros(1, 4, sim.size(2) // 4, sim.size(3) // 4).float().cuda()
     print(f'now {name}')
     with torch.no_grad():
-        fake = netG(Variable(sim), Variable(zhint)).data
+        fake = netG(Variable(sim), Variable(zhint)).data.squeeze()
     to_pil(fake.cpu().mul(0.5).add(0.5)).save(os.path.join(opt.optf, name))
     i += 1
