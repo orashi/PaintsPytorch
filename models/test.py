@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-I2V_PATH = '/opt/tomcat/webapps/ROOT/func/models/i2v.pth'
+I2V_PATH = 'i2v.pth'
 
 
 class ResNeXtBottleneck(nn.Module):
