@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from torchvision.transforms import ToPILImage
 
 from data.eval import CreateDataLoader
-from models.standard_test import NetG
+from models.test import NetG
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataroot', required=True, help='path to sketch dataset')
