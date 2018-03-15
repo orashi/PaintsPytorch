@@ -27,7 +27,10 @@ torch.manual_seed(opt.manualSeed)
 torch.cuda.manual_seed(opt.manualSeed)
 cudnn.benchmark = True
 ####### regular set up end
-
+try:
+    os.makedirs(opt.optf)
+except OSError:
+    pass
 dataloader = CreateDataLoader(opt)
 to_pil = ToPILImage()
 
@@ -41,6 +44,7 @@ i = 0
 
 while i < len(dataloader):
     sim, name = data_iter.next()
+    name = name[0]
     sim = sim.cuda()
     zhint = torch.zeros(1, 4, sim.size(2) // 4, sim.size(3) // 4).float().cuda()
     print(f'now {name}')
