@@ -124,6 +124,11 @@ def sketch_loader(path):
     return Image.open(path).convert('L')
 
 
+def resize_by(img, side_min):
+    return img.resize((int(img.size[0] / min(img.size) * side_min), int(img.size[1] / min(img.size) * side_min)),
+                      Image.BICUBIC)
+
+
 class ImageFolder(data.Dataset):
     def __init__(self, root, transform=None, vtransform=None, stransform=None):
         imgs, self.root = make_dataset(root)
@@ -138,6 +143,7 @@ class ImageFolder(data.Dataset):
         fname = self.imgs[index]  # random.randint(1, 3
         Cimg = color_loader(os.path.join(self.root[index], 'color', fname))
         Simg = sketch_loader(os.path.join(self.root[index], str(random.randint(0, 2)), fname))
+        Cimg, Simg = resize_by(Cimg, 512), resize_by(Simg, 512)
         Cimg, Simg = RandomCrop(512)(Cimg, Simg)
         if random.random() < 0.5:
             Cimg, Simg = Cimg.transpose(Image.FLIP_LEFT_RIGHT), Simg.transpose(Image.FLIP_LEFT_RIGHT)
