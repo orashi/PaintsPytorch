@@ -104,9 +104,9 @@ def make_dataset(root):
                 images.append(fname)
                 roots.append(root)
 
-    images = random.sample(images, 100)
-    roots = random.sample(roots, 100)
-
+    images = random.sample(images,1900)
+    roots = random.sample(roots, 1900)
+    
     for _, __, fnames in sorted(os.walk(os.path.join('/home/orashi/datasets/fine/col'))):
         for fname in fnames:
             if is_image_file(fname):

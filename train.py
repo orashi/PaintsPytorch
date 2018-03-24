@@ -309,13 +309,13 @@ for epoch in range(opt.niter):
         gen_iterations += 1
 
     # do checkpointing
-    if opt.cut == 0:
-        torch.save(netG.state_dict(), '%s/netG_epoch_only.pth' % opt.outf)
-        torch.save(netD.state_dict(), '%s/netD_epoch_only.pth' % opt.outf)
-        torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
-        torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
-    elif (epoch + opt.epoi) % opt.cut == 0:
-        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, gen_iterations))
-        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, gen_iterations))
-        torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
-        torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
+        if opt.cut == 0:
+            torch.save(netG.state_dict(), '%s/netG_epoch_only.pth' % opt.outf)
+            torch.save(netD.state_dict(), '%s/netD_epoch_only.pth' % opt.outf)
+            torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
+            torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
+        elif gen_iterations % 10000 == 1993:#(epoch + opt.epoi) % opt.cut == 0:
+            torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, gen_iterations))
+            torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, gen_iterations))
+            torch.save(optimizerG.state_dict(), '%s/optimG_checkpoint.pth' % opt.outf)
+            torch.save(optimizerD.state_dict(), '%s/optimD_checkpoint.pth' % opt.outf)
