@@ -95,25 +95,22 @@ def is_image_file(filename):
 
 
 def make_dataset(root):
-    images = []
-    roots = []
+    oimages = []
+    roots = [root, '/home/orashi/datasets/fine_train']
 
     for _, __, fnames in sorted(os.walk(os.path.join(root, 'color'))):
         for fname in fnames:
             if is_image_file(fname):
-                images.append(fname)
-                roots.append(root)
+                oimages.append(fname)
 
-    images = random.sample(images,1900)
-    roots = random.sample(roots, 1900)
-    
-    for _, __, fnames in sorted(os.walk(os.path.join('/home/orashi/datasets/fine/col'))):
+    images = []
+
+    for _, __, fnames in sorted(os.walk('/home/orashi/datasets/fine_train/col')):
         for fname in fnames:
             if is_image_file(fname):
                 images.append(fname)
-                roots.append('/home/orashi/datasets/fine')
 
-    return images, roots
+    return oimages, images, roots
 
 
 def color_loader(path):
@@ -131,18 +128,24 @@ def resize_by(img, side_min):
 
 class ImageFolder(data.Dataset):
     def __init__(self, root, transform=None, vtransform=None, stransform=None):
-        imgs, self.root = make_dataset(root)
+        oimgs, imgs, self.root = make_dataset(root)
         if len(imgs) == 0:
             raise (RuntimeError("Found 0 images in folders."))
+        self.oimgs = oimgs
         self.imgs = imgs
         self.transform = transform
         self.vtransform = vtransform
         self.stransform = stransform
+        self.base_len = len(self.imgs)
+        self.RATIO = 19
 
     def __getitem__(self, index):
-        fname = self.imgs[index]  # random.randint(1, 3
-        Cimg = color_loader(os.path.join(self.root[index], 'color', fname))
-        Simg = sketch_loader(os.path.join(self.root[index], str(random.randint(0, 2)), fname))
+        imgs = random.sample(self.oimgs, self.base_len * self.RATIO) + self.imgs
+        roots = [self.root[0]] * (self.base_len * self.RATIO) + [self.root[1]] * self.base_len
+
+        fname = imgs[index]  # random.randint(1, 3
+        Cimg = color_loader(os.path.join(roots[index], 'color', fname))
+        Simg = sketch_loader(os.path.join(roots[index], str(random.randint(0, 2)), fname))
         Cimg, Simg = resize_by(Cimg, 512), resize_by(Simg, 512)
         Cimg, Simg = RandomCrop(512)(Cimg, Simg)
         if random.random() < 0.5:
@@ -153,7 +156,7 @@ class ImageFolder(data.Dataset):
         return Cimg, Vimg, Simg
 
     def __len__(self):
-        return len(self.imgs)
+        return len(self.imgs) * (self.RATIO + 1)
 
 
 def CreateDataLoader(opt):
